@@ -12,7 +12,7 @@ void init() {
   char cwd[PATH_MAX];
   if (getcwd(cwd, sizeof(cwd)) != NULL) {
 
-    iris_printf(IRIS_LOG_INFO, "Initializing project at %s\n", cwd);
+    iris_printf(IRIS_LOG_INFO, "Initializing project at %s...\n", cwd);
   } else {
     iris_printf(IRIS_LOG_ERROR, "getcwd() error: %s\n", strerror(errno));
   }

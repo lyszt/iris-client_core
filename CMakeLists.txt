@@ -18,8 +18,14 @@ file(GLOB_RECURSE IRISCLI_SRC
 
 add_executable(iris ${IRISCLI_SRC})
 
+# Find dependencies
+find_package(CURL REQUIRED)
+
 # Make sure the project uses our include directory
 target_include_directories(iris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/lib")
+
+# Link dependencies
+target_link_libraries(iris PRIVATE CURL::libcurl)
 
 # Compiler flags (add -Wall by default)
 target_compile_options(iris PRIVATE -Wall)

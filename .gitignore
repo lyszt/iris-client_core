@@ -14,3 +14,7 @@
 # Editor/OS specific
 .vscode/
 .DS_Store
+
+# Dependencies (install via install-deps.sh)
+curl-*/
+vendor/
