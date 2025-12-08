@@ -1,7 +1,7 @@
 #ifndef PARSER_H 
     #define PARSER_H 
 
-    void redirector(int argsc, char *argsv[]);
+    void route_command(int argsc, char *argv[]);
 
 
 #endif 

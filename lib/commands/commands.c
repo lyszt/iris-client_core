@@ -5,5 +5,5 @@
 
 
 void help_commands() {
-    printf("Welcome to IRIS! " );
+    printf("usage:" );
 }
