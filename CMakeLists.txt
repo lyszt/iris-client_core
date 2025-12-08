@@ -13,23 +13,24 @@ endif()
 # Define project source files
 file(GLOB_RECURSE IRISCLI_SRC
   "${PROJECT_SOURCE_DIR}/src/*.c"
+  "${PROJECT_SOURCE_DIR}/lib/**/*.c"
 )
 
-add_executable(program ${IRISCLI_SRC})
+add_executable(iris ${IRISCLI_SRC})
 
 # Make sure the project uses our include directory
-target_include_directories(program PRIVATE "${PROJECT_SOURCE_DIR}/include")
+target_include_directories(iris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/lib")
 
 # Compiler flags (add -Wall by default)
-target_compile_options(program PRIVATE -Wall)
+target_compile_options(iris PRIVATE -Wall)
 
 # Place the runtime binary in the `build/` folder to match the existing Makefile
-set_target_properties(program PROPERTIES
+set_target_properties(iris PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/build"
 )
 
 # Install target (optional)
-install(TARGETS program
+install(TARGETS iris
   RUNTIME DESTINATION bin
 )
 
