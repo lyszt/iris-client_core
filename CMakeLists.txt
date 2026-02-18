@@ -21,11 +21,13 @@ add_executable(iris ${IRISCLI_SRC})
 # Find dependencies
 find_package(CURL REQUIRED)
 
-# Make sure the project uses our include directory
-target_include_directories(iris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/lib")
+# Make sure the project uses our include directory and libgit2
+target_include_directories(iris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/lib" "${PROJECT_SOURCE_DIR}/vendor/libgit2-1.8.5/include")
 
-# Link dependencies
-target_link_libraries(iris PRIVATE CURL::libcurl)
+
+# Build and link libgit2 statically from vendor
+add_subdirectory(vendor/libgit2-1.8.5 vendor/libgit2-1.8.5/build EXCLUDE_FROM_ALL)
+target_link_libraries(iris PRIVATE CURL::libcurl git2)
 
 # Compiler flags (add -Wall by default)
 target_compile_options(iris PRIVATE -Wall)
@@ -46,5 +48,13 @@ add_custom_command(
 install(TARGETS iris
   RUNTIME DESTINATION bin
 )
+
+# Download and extract libgit2 if not present
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/vendor/libgit2-v1.8.5.zip")
+  file(DOWNLOAD "https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.5.zip" "${PROJECT_SOURCE_DIR}/vendor/libgit2-v1.8.5.zip" SHOW_PROGRESS)
+endif()
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/vendor/libgit2-1.8.5/CMakeLists.txt")
+  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${PROJECT_SOURCE_DIR}/vendor/libgit2-v1.8.5.zip" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/vendor")
+endif()
 
 message(STATUS "Configured IrisCLI with ${CMAKE_C_COMPILER} (build type=${CMAKE_BUILD_TYPE})")

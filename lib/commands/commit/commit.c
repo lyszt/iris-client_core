@@ -5,7 +5,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+
 #include <errno.h>
+#include "git2_utils/git2_utils.h"
 
 
 void commit_push() {
@@ -24,11 +26,9 @@ void commit_push() {
 		iris_printf(IRIS_LOG_ERROR, "Your message can't be empty.\n");
 		return;
 	}
-	// Prepare git command
-	char cmd[2048];
-	snprintf(cmd, sizeof(cmd), "git add . && git commit -m \"%s\" && git push", commit_msg);
-	int ret = system(cmd);
+	// Use libgit2 for commit and push
+	int ret = iris_git_commit_and_push(".", commit_msg);
 	if (ret != 0) {
-		iris_printf(IRIS_LOG_ERROR, "Git command failed.\n");
+		iris_printf(IRIS_LOG_ERROR, "Git commit/push failed.\n");
 	}
 }

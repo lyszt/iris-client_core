@@ -50,7 +50,9 @@ clean:
 		$(CMAKE) --build $(BUILD_DIR) --target clean || true; \
 	fi
 
-reconfigure:
+		mkdir -p vendor
+		wget -O vendor/libgit2-v1.8.5.zip https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.5.zip
+		unzip -o vendor/libgit2-v1.8.5.zip -d vendor/
 	@echo "Re-configuring (removing cache)..."
 	@if [ -d $(BUILD_DIR) ]; then rm -f $(BUILD_DIR)/CMakeCache.txt; fi
 	@$(MAKE) configure
