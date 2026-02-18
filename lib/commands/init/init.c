@@ -1,19 +1,33 @@
 #include "init.h"
 #include "term/term.h"
+#include <errno.h>
 #include <limits.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <stdio.h>
-#include <errno.h>
 
+void return_error() {
+  iris_printf(IRIS_LOG_ERROR, "Failed to initialize IRIS project.");
+  return;
+}
 
 void init() {
-  char cwd[PATH_MAX];
-  if (getcwd(cwd, sizeof(cwd)) != NULL) {
-
-    iris_printf(IRIS_LOG_INFO, "Initializing project at %s...\n", cwd);
-  } else {
-    iris_printf(IRIS_LOG_ERROR, "getcwd() error: %s\n", strerror(errno));
+  int ret = system("mkdir -p .iris");
+  if (ret != 0) {
+    return_error();
+    return;
   }
+  FILE *macros = fopen(".iris/.iris.macros", "w");
+
+  if (ret == 0)
+    macros = fopen(".iris/.iris.macros", "w");
+  if (ret != 0 || !macros) {
+    if (macros)
+      fclose(macros);
+    return_error();
+    return;
+  }
+  fclose(macros);
+  iris_printf(IRIS_LOG_INFO, "Initialized IRIS project.");
 }
