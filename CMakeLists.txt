@@ -23,6 +23,29 @@ add_executable(iris ${IRISCLI_SRC})
 # Find dependencies
 find_package(CURL REQUIRED)
 
+# SWI-Prolog (embedded). If not found, parser falls back to C-only router.
+find_package(PkgConfig QUIET)
+if(PkgConfig_FOUND)
+  pkg_check_modules(SWIPL QUIET swipl)
+endif()
+if(NOT SWIPL_FOUND)
+  find_library(SWIPL_LIBRARY NAMES swipl)
+  find_path(SWIPL_INCLUDE_DIR NAMES SWI-Prolog.h)
+  if(SWIPL_LIBRARY AND SWIPL_INCLUDE_DIR)
+    set(SWIPL_LIBRARIES ${SWIPL_LIBRARY})
+    set(SWIPL_INCLUDE_DIRS ${SWIPL_INCLUDE_DIR})
+    set(SWIPL_FOUND TRUE)
+  endif()
+endif()
+if(SWIPL_FOUND)
+  target_compile_definitions(iris PRIVATE IRIS_USE_PROLOG=1)
+  target_include_directories(iris PRIVATE ${SWIPL_INCLUDE_DIRS})
+  target_link_libraries(iris PRIVATE ${SWIPL_LIBRARIES})
+  message(STATUS "Iris: using Prolog command router (SWI-Prolog)")
+else()
+  message(STATUS "Iris: SWI-Prolog not found; using C-only command router. Install libswipl-dev for Prolog router.")
+endif()
+
 # Make sure the project uses our include directory and libgit2
 target_include_directories(iris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/lib" "${PROJECT_SOURCE_DIR}/vendor/libgit2-1.8.5/include")
 
