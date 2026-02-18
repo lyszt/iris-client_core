@@ -12,22 +12,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
-      with:
-        submodules: 
 
-    - name: Install Dependencies
+    - name: Install System Headers
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake libssl-dev libcurl4-openssl-dev
+        sudo apt-get install -y cmake libssl-dev libcurl4-openssl-dev zlib1g-dev
 
-    - name: Configure CMake
-      # We tell CMake to prepare the build in the 'build' folder
-      run: cmake -B build -S .
+    - name: Run Iris Bootstrap Build
+      run: make build
 
-    - name: Build Iris
-      # This is the "machine gun" build command
-      run: cmake --build build --target iris
-
-    - name: Test
-      # If you have CTest set up, run this. Otherwise, just check if binary exists.
-      run: test -f ./iris || test -f ./build/iris
+    - name: Verify Binary
+      run: test -f ./iris
