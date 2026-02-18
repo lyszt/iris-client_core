@@ -13,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        submodules: recursive  # <--- CRITICAL: This pulls libgit2
+        submodules: 
 
     - name: Install Dependencies
       run: |
