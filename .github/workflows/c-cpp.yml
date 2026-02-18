@@ -18,7 +18,7 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y cmake libssl-dev  # libgit2 needs SSL headers
+        sudo apt-get install -y cmake libssl-dev libcurl4-openssl-dev
 
     - name: Configure CMake
       # We tell CMake to prepare the build in the 'build' folder
