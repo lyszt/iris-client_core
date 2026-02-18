@@ -1,3 +1,5 @@
+# Set libgit2 version as a variable
+set(LIBGIT2_VERSION 1.8.5)
 cmake_minimum_required(VERSION 3.10)
 
 project(IrisCLI VERSION 0.1 LANGUAGES C)
@@ -25,8 +27,10 @@ find_package(CURL REQUIRED)
 target_include_directories(iris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/lib" "${PROJECT_SOURCE_DIR}/vendor/libgit2-1.8.5/include")
 
 
+set(LIBGIT2_DIR vendor/libgit2-${LIBGIT2_VERSION})
 # Build and link libgit2 statically from vendor
-add_subdirectory(vendor/libgit2-1.8.5 vendor/libgit2-1.8.5/build EXCLUDE_FROM_ALL)
+add_subdirectory(${LIBGIT2_DIR})
+target_include_directories(iris PRIVATE ${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/include)
 target_link_libraries(iris PRIVATE git2 CURL::libcurl)
 
 # Compiler flags (add -Wall by default)
@@ -50,11 +54,12 @@ install(TARGETS iris
 )
 
 # Download and extract libgit2 if not present (using wget for reliability)
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/vendor/libgit2-v1.8.5.zip")
-  execute_process(COMMAND wget -O "${PROJECT_SOURCE_DIR}/vendor/libgit2-v1.8.5.zip" "https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.5.zip")
+set(LIBGIT2_ZIP vendor/libgit2-v${LIBGIT2_VERSION}.zip)
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}")
+  execute_process(COMMAND wget -O "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}" "https://github.com/libgit2/libgit2/archive/refs/tags/v${LIBGIT2_VERSION}.zip")
 endif()
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/vendor/libgit2-1.8.5/CMakeLists.txt")
-  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${PROJECT_SOURCE_DIR}/vendor/libgit2-v1.8.5.zip" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/vendor")
+if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/CMakeLists.txt")
+  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/vendor")
 endif()
 
 message(STATUS "Configured IrisCLI with ${CMAKE_C_COMPILER} (build type=${CMAKE_BUILD_TYPE})")
