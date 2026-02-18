@@ -27,7 +27,7 @@ target_include_directories(iris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJE
 
 # Build and link libgit2 statically from vendor
 add_subdirectory(vendor/libgit2-1.8.5 vendor/libgit2-1.8.5/build EXCLUDE_FROM_ALL)
-target_link_libraries(iris PRIVATE CURL::libcurl git2)
+target_link_libraries(iris PRIVATE git2 CURL::libcurl)
 
 # Compiler flags (add -Wall by default)
 target_compile_options(iris PRIVATE -Wall)
