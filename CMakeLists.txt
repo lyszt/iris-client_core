@@ -49,9 +49,9 @@ install(TARGETS iris
   RUNTIME DESTINATION bin
 )
 
-# Download and extract libgit2 if not present
+# Download and extract libgit2 if not present (using wget for reliability)
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/vendor/libgit2-v1.8.5.zip")
-  file(DOWNLOAD "https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.5.zip" "${PROJECT_SOURCE_DIR}/vendor/libgit2-v1.8.5.zip" SHOW_PROGRESS)
+  execute_process(COMMAND wget -O "${PROJECT_SOURCE_DIR}/vendor/libgit2-v1.8.5.zip" "https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.5.zip")
 endif()
 if(NOT EXISTS "${PROJECT_SOURCE_DIR}/vendor/libgit2-1.8.5/CMakeLists.txt")
   execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${PROJECT_SOURCE_DIR}/vendor/libgit2-v1.8.5.zip" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/vendor")

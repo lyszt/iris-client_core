@@ -1,3 +1,12 @@
+# Ensure libgit2 is present before configure/build/run
+deps:
+	@mkdir -p vendor
+	@if [ ! -f vendor/libgit2-v1.8.5.zip ]; then \
+		wget -O vendor/libgit2-v1.8.5.zip https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.5.zip; \
+	fi
+	@if [ ! -d vendor/libgit2-1.8.5 ]; then \
+		unzip -o vendor/libgit2-v1.8.5.zip -d vendor/; \
+	fi
 SHELL := /bin/bash
 
 # Basic Makefile wrapper for CMake
@@ -24,7 +33,7 @@ BIN := $(BIN_NAME)
 
 all: build
 
-configure:
+configure: deps
 	@echo "Configuring (BUILD_DIR=$(BUILD_DIR), CONFIG=$(CONFIG))..."
 	@$(CMAKE) -S . -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=$(CONFIG) $(CMAKE_OPTIONS)
 
@@ -49,10 +58,6 @@ clean:
 	@if [ -d $(BUILD_DIR) ]; then \
 		$(CMAKE) --build $(BUILD_DIR) --target clean || true; \
 	fi
-
-		mkdir -p vendor
-		wget -O vendor/libgit2-v1.8.5.zip https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.5.zip
-		unzip -o vendor/libgit2-v1.8.5.zip -d vendor/
 	@echo "Re-configuring (removing cache)..."
 	@if [ -d $(BUILD_DIR) ]; then rm -f $(BUILD_DIR)/CMakeCache.txt; fi
 	@$(MAKE) configure
