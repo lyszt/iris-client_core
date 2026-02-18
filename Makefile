@@ -18,7 +18,7 @@ CMAKE_OPTIONS ?=
 
 # Binary name (matches CMake add_executable)
 BIN_NAME ?= iris
-BIN := $(BUILD_DIR)/$(BIN_NAME)
+BIN := $(BIN_NAME)
 
 .PHONY: all configure build run install clean distclean help ctest reconfigure
 
@@ -34,12 +34,11 @@ build: configure
 
 run: build
 	@echo "Running $(BIN)"
-	@$(BIN)
+	@./$(BIN)
 
-install: build
 	@echo "Installing to /usr/local/bin by default (use DESTDIR=...)"
 	install -d $(DESTDIR)/usr/local/bin
-	install -m 755 $(BUILD_DIR)/iris $(DESTDIR)/usr/local/bin/iris
+	install -m 755 iris $(DESTDIR)/usr/local/bin/iris
 	@$(CMAKE) --install $(BUILD_DIR) --prefix /usr/local
 
 ctest: build
