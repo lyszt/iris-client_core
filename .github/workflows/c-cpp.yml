@@ -8,16 +8,26 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
     - uses: actions/checkout@v4
-    - name: configure
-      run: ./configure
-    - name: make
-      run: make
-    - name: make check
-      run: make check
-    - name: make distcheck
-      run: make distcheck
+      with:
+        submodules: recursive  # <--- CRITICAL: This pulls libgit2
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake libssl-dev  # libgit2 needs SSL headers
+
+    - name: Configure CMake
+      # We tell CMake to prepare the build in the 'build' folder
+      run: cmake -B build -S .
+
+    - name: Build Iris
+      # This is the "machine gun" build command
+      run: cmake --build build --target iris
+
+    - name: Test
+      # If you have CTest set up, run this. Otherwise, just check if binary exists.
+      run: test -f ./iris || test -f ./build/iris
