@@ -34,7 +34,87 @@ static int load_router(const char *project_root) {
   return PL_call_predicate(NULL, PL_Q_NODEBUG, consult_pred, path_term);
 }
 
-/* Resolve command via Prolog; write canonical command atom into buf, max len. Returns 1 on success. */
+/* Execute one command term (atom or compound not/1, alias_add/1). Returns 1 on success, 0 on failure. */
+static int run_one_cmd(term_t cmd_ref, const char *project_root) {
+  if (PL_is_atom(cmd_ref)) {
+    char *name = NULL;
+    if (!PL_get_atom_chars(cmd_ref, &name)) return 0;
+    if (strcmp(name, "help") == 0)   { help_commands(); return 1; }
+    if (strcmp(name, "init") == 0)   { init(); return 1; }
+    if (strcmp(name, "commit") == 0) { commit_push(); return 1; }
+    if (strcmp(name, "rebuild") == 0){ rebuild(project_root); return 1; }
+    help_commands();
+    return 0;
+  }
+  if (PL_is_compound(cmd_ref)) {
+    atom_t name_atom;
+    int arity;
+    if (!PL_get_name_arity(cmd_ref, &name_atom, &arity)) return 0;
+    const char *functor = PL_atom_chars(name_atom);
+    if (functor && strcmp(functor, "not") == 0 && arity == 1) {
+      term_t inner = PL_new_term_ref();
+      PL_get_arg(1, cmd_ref, inner);
+      return run_one_cmd(inner, project_root) ? 0 : 1; /* succeed iff inner fails */
+    }
+    if (functor && strcmp(functor, "alias_add") == 0 && arity == 1) {
+      /* alias_add(ArgList): store alias for later; for now just succeed */
+      (void)project_root;
+      return 1;
+    }
+  }
+  help_commands();
+  return 0;
+}
+
+/* Call iris_goals(Argv, GoalList) and run the goal chain (and/or/not). */
+static void run_goals_via_prolog(int argc, char *argv[], const char *project_root) {
+  term_t argv_list = PL_new_term_ref();
+  term_t goal_list_ref = PL_new_term_ref();
+  put_argv_list(argv_list, argc, argv);
+
+  predicate_t iris_goals_pred = PL_predicate("iris_goals", 2, "user");
+  term_t args = PL_new_term_refs(2);
+  PL_put_term(args, argv_list);
+  PL_put_variable(args + 1);
+
+  if (!PL_call_predicate(NULL, PL_Q_NODEBUG | PL_Q_CATCH_EXCEPTION, iris_goals_pred, args)) {
+    help_commands();
+    return;
+  }
+  PL_put_term(goal_list_ref, args + 1);
+
+  term_t head = PL_new_term_ref();
+  term_t tail = PL_new_term_ref();
+  term_t list_cursor = PL_new_term_ref();
+  PL_put_term(list_cursor, goal_list_ref);
+
+  int prev_success = 1; /* so first goal always runs */
+  while (PL_get_list(list_cursor, head, tail)) {
+    int goal_arity;
+    atom_t goal_name;
+    if (!PL_is_compound(head) || !PL_get_name_arity(head, &goal_name, &goal_arity) || goal_arity != 2) {
+      PL_put_term(list_cursor, tail);
+      continue;
+    }
+    term_t op_ref = PL_new_term_ref();
+    term_t cmd_ref = PL_new_term_ref();
+    PL_get_arg(1, head, op_ref);
+    PL_get_arg(2, head, cmd_ref);
+
+    char *op_str = NULL;
+    (void)PL_get_atom_chars(op_ref, &op_str);
+    int is_and = op_str && strcmp(op_str, "and") == 0;
+    int is_or  = op_str && strcmp(op_str, "or") == 0;
+
+    if (is_and && !prev_success) { PL_put_term(list_cursor, tail); continue; }
+    if (is_or && prev_success)  { PL_put_term(list_cursor, tail); continue; }
+
+    prev_success = run_one_cmd(cmd_ref, project_root);
+    PL_put_term(list_cursor, tail);
+  }
+}
+
+/* Legacy: resolve single command into buf (for callers that need one atom). */
 static int resolve_command_via_prolog(int argc, char *argv[], char *buf, size_t bufsize) {
   term_t argv_list = PL_new_term_ref();
   put_argv_list(argv_list, argc, argv);
@@ -72,29 +152,7 @@ void route_command(int argc, char *argv[], const char *project_root) {
     }
   }
 
-  char command[32];
-  if (!resolve_command_via_prolog(argc, argv, command, sizeof(command))) {
-    help_commands();
-    return;
-  }
-
-  if (strcmp(command, "help") == 0) {
-    help_commands();
-    return;
-  }
-  if (strcmp(command, "init") == 0) {
-    init();
-    return;
-  }
-  if (strcmp(command, "commit") == 0) {
-    commit_push();
-    return;
-  }
-  if (strcmp(command, "rebuild") == 0) {
-    rebuild(project_root);
-    return;
-  }
-  help_commands();
+  run_goals_via_prolog(argc, argv, project_root);
 #else
   /* C-only fallback when SWI-Prolog is not available */
   if (argc < 2) {
