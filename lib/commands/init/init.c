@@ -13,21 +13,19 @@ void return_error() {
 }
 
 void init() {
-  int ret = system("mkdir -p .iris");
-  if (ret != 0) {
-    return_error();
-    return;
-  }
-  FILE *macros = fopen(".iris/.iris.macros", "w");
+    if (system("mkdir -p .iris") != 0) {
+        return_error();
+        return;
+    }
 
-  if (ret == 0)
-    macros = fopen(".iris/.iris.macros", "w");
-  if (ret != 0 || !macros) {
-    if (macros)
-      fclose(macros);
-    return_error();
-    return;
-  }
-  fclose(macros);
-  iris_printf(IRIS_LOG_INFO, "Initialized IRIS project.");
+    FILE *macros = fopen(".iris/.iris.macros", "w");
+    if (!macros) {
+        return_error();
+        return;
+    }
+
+    fprintf(macros, "# Iris Project Macros\n");
+    fclose(macros);
+
+    iris_printf(IRIS_LOG_INFO, "Initialized IRIS project in the current directory.");
 }
