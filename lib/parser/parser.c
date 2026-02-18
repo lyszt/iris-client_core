@@ -1,6 +1,7 @@
 #include "./parser.h"
 #include "commands/commands.h"
 #include "commands/init/init.h"
+#include "commands/rebuild/rebuild.h"
 #include "commands/commit/commit.h"
 #include <limits.h>
 #include <stdio.h>
