@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 
-void route_command(int argc, char *argv[]) {
+void route_command(int argc, char *argv[], const char *project_root) {
   if (argc < 2) {
     help_commands();
     return;
@@ -21,6 +21,10 @@ void route_command(int argc, char *argv[]) {
   
   if(strcmp(command, "copush") == 0) {
     commit_push();
+  }
+
+  if(strcmp(command, "rebuild") == 0) {
+    rebuild(project_root);
   }
   
 }

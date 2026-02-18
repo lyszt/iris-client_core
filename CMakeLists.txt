@@ -30,9 +30,16 @@ target_link_libraries(iris PRIVATE CURL::libcurl)
 # Compiler flags (add -Wall by default)
 target_compile_options(iris PRIVATE -Wall)
 
-# Place the runtime binary in the `build/` folder to match the existing Makefile
+
 set_target_properties(iris PROPERTIES
-  RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/build"
+  RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}"
+)
+
+# Write project root to iris.conf in $HOME/.config/iris-cli during build
+add_custom_command(
+  TARGET iris POST_BUILD
+  COMMAND mkdir -p "$ENV{HOME}/.config/iris-cli" && echo "PATH=${PROJECT_SOURCE_DIR}" > "$ENV{HOME}/.config/iris-cli/iris.conf"
+  COMMENT "Writing project root to $HOME/.config/iris-cli/iris.conf"
 )
 
 # Install target (optional)

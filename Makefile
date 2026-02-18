@@ -38,6 +38,8 @@ run: build
 
 install: build
 	@echo "Installing to /usr/local/bin by default (use DESTDIR=...)"
+	install -d $(DESTDIR)/usr/local/bin
+	install -m 755 $(BUILD_DIR)/iris $(DESTDIR)/usr/local/bin/iris
 	@$(CMAKE) --install $(BUILD_DIR) --prefix /usr/local
 
 ctest: build
