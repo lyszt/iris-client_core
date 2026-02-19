@@ -5,14 +5,14 @@
 #include <string.h>
 #include <unistd.h>
 #include <limits.h>
-
 #include "utils.h"
 
-void alias_add(const char* project_root) {
+void alias_add() {
 
-    if (find_iris_root(project_root, PATH_MAX)) {
-        iris_printf(IRIS_LOG_INFO, "alias add called. Project root found at: %s\n", project_root);
-        // TODO: Implement alias add functionality using root_path
+    char iris_location[PATH_MAX]; 
+
+    if (find_iris_root(iris_location, PATH_MAX)) {
+        iris_printf(IRIS_LOG_INFO, "alias add called. Iris location found at: %s\n", iris_location);
     } else {
         iris_printf(IRIS_LOG_ERROR, "Fatal: Not in an Iris project (or any of the parent directories)\n");
     }
