@@ -47,7 +47,7 @@ else()
 endif()
 
 # Make sure the project uses our include directory and libgit2
-target_include_directories(iris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/lib" "${PROJECT_SOURCE_DIR}/vendor/libgit2-1.8.5/include")
+target_include_directories(iris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/lib" "${PROJECT_SOURCE_DIR}/vendor/libgit2-1.8.5/include")
 
 
 set(LIBGIT2_DIR vendor/libgit2-${LIBGIT2_VERSION})

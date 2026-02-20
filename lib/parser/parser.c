@@ -3,7 +3,9 @@
 #include "commands/init/init.h"
 #include "commands/rebuild/rebuild.h"
 #include "commands/commit/commit.h"
+#include "commands/alias/add/alias_add.h"
 #include <limits.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -34,15 +36,112 @@ static int load_router(const char *project_root) {
   return PL_call_predicate(NULL, PL_Q_NODEBUG, consult_pred, path_term);
 }
 
-/* Execute one command term (atom or compound not/1, alias_add/1). Returns 1 on success, 0 on failure. */
+/* Consult each command module .pl so command_usage/3 is available. */
+static int load_command_modules(const char *project_root) {
+  const char *modules[] = {
+    "lib/commands/init/init.pl",
+    "lib/commands/commit/commit.pl",
+    "lib/commands/rebuild/rebuild.pl",
+    "lib/commands/alias/add/alias_add.pl",
+  };
+  for (size_t i = 0; i < sizeof(modules) / sizeof(modules[0]); i++) {
+    char path[PATH_MAX];
+    int n = snprintf(path, sizeof(path), "%s/%s", project_root, modules[i]);
+    if (n < 0 || (size_t)n >= sizeof(path))
+      return 0;
+    term_t path_term = PL_new_term_ref();
+    PL_put_atom_chars(path_term, path);
+    predicate_t consult_pred = PL_predicate("consult", 1, "user");
+    if (!PL_call_predicate(NULL, PL_Q_NODEBUG, consult_pred, path_term))
+      return 0;
+  }
+  return 1;
+}
+
+/* Convert Prolog list of atoms (or sublists, flattened to one string per sublist) to argc/argv.
+ * Caller frees *argv_out and each (*argv_out)[i]. Returns 0 on failure. */
+static int pl_list_to_argv(term_t list_ref, int *argc_out, char ***argv_out) {
+  term_t tail = PL_copy_term_ref(list_ref);
+  term_t head = PL_new_term_ref();
+  int cap = 32, n = 0;
+  char **argv = (char **)malloc((size_t)cap * sizeof(char *));
+  if (!argv) return 0;
+  *argv_out = argv;
+  *argc_out = 0;
+  while (PL_get_list(tail, head, tail)) {
+    char *s = NULL;
+    if (PL_is_atom(head) && PL_get_atom_chars(head, &s)) {
+      if (n >= cap) {
+        cap *= 2;
+        char **nargv = (char **)realloc(argv, (size_t)cap * sizeof(char *));
+        if (!nargv) goto fail;
+        argv = nargv;
+        *argv_out = argv;
+      }
+      argv[n] = strdup(s);
+      if (!argv[n]) goto fail;
+      n++;
+    } else if (PL_is_list(head)) {
+      /* Bracket group: flatten to one space-separated string */
+      term_t st = PL_copy_term_ref(head);
+      term_t sh = PL_new_term_ref();
+      size_t len = 0;
+      int first = 1;
+      while (PL_get_list(st, sh, st)) {
+        char *a = NULL;
+        if (PL_get_atom_chars(sh, &a)) {
+          len += (first ? 0 : 1) + strlen(a);
+          first = 0;
+        }
+      }
+      if (PL_get_nil(st) && len > 0) {
+        char *buf = (char *)malloc(len + 1);
+        if (!buf) goto fail;
+        buf[0] = '\0';
+        st = PL_copy_term_ref(head);
+        first = 1;
+        while (PL_get_list(st, sh, st)) {
+          char *a = NULL;
+          if (PL_get_atom_chars(sh, &a)) {
+            if (!first) strcat(buf, " ");
+            strcat(buf, a);
+            first = 0;
+          }
+        }
+        if (n >= cap) {
+          cap *= 2;
+          char **nargv = (char **)realloc(argv, (size_t)cap * sizeof(char *));
+          if (!nargv) { free(buf); goto fail; }
+          argv = nargv;
+          *argv_out = argv;
+        }
+        argv[n++] = buf;
+      }
+    }
+  }
+  if (!PL_get_nil(tail)) goto fail;
+  *argc_out = n;
+  return 1;
+fail:
+  while (n > 0) free(argv[--n]);
+  free(argv);
+  *argv_out = NULL;
+  *argc_out = 0;
+  return 0;
+}
+
+static void free_argv(int argc, char **argv) {
+  if (!argv) return;
+  for (int i = 0; i < argc; i++) free(argv[i]);
+  free(argv);
+}
+
+/* Execute one command term: help (atom) or cmd(Params) compound. Returns 1 on success, 0 on failure. */
 static int run_one_cmd(term_t cmd_ref, const char *project_root) {
   if (PL_is_atom(cmd_ref)) {
     char *name = NULL;
     if (!PL_get_atom_chars(cmd_ref, &name)) return 0;
-    if (strcmp(name, "help") == 0)   { help_commands(); return 1; }
-    if (strcmp(name, "init") == 0)   { init(); return 1; }
-    if (strcmp(name, "commit") == 0) { commit_push(); return 1; }
-    if (strcmp(name, "rebuild") == 0){ rebuild(project_root); return 1; }
+    if (strcmp(name, "help") == 0) { help_commands(); return 1; }
     help_commands();
     return 0;
   }
@@ -54,12 +153,33 @@ static int run_one_cmd(term_t cmd_ref, const char *project_root) {
     if (functor && strcmp(functor, "not") == 0 && arity == 1) {
       term_t inner = PL_new_term_ref();
       PL_get_arg(1, cmd_ref, inner);
-      return run_one_cmd(inner, project_root) ? 0 : 1; /* succeed iff inner fails */
+      return run_one_cmd(inner, project_root) ? 0 : 1;
     }
-    if (functor && strcmp(functor, "alias_add") == 0 && arity == 1) {
-      /* alias_add(ArgList): store alias for later; for now just succeed */
-      (void)project_root;
-      return 1;
+    if (functor && arity == 1) {
+      term_t params_ref = PL_new_term_ref();
+      PL_get_arg(1, cmd_ref, params_ref);
+      int argc = 0;
+      char **argv = NULL;
+      if (!pl_list_to_argv(params_ref, &argc, &argv)) {
+        help_commands();
+        return 0;
+      }
+      int ok = 0;
+      if (strcmp(functor, "init") == 0) {
+        init(argc >= 1 ? argv[0] : ".");
+        ok = 1;
+      } else if (strcmp(functor, "commit") == 0) {
+        commit_push();
+        ok = 1;
+      } else if (strcmp(functor, "rebuild") == 0) {
+        rebuild(project_root);
+        ok = 1;
+      } else if (strcmp(functor, "alias_add") == 0) {
+        alias_add(argc, argv);
+        ok = 1;
+      }
+      free_argv(argc, argv);
+      if (ok) return 1;
     }
   }
   help_commands();
@@ -146,7 +266,7 @@ void route_command(int argc, char *argv[], const char *project_root) {
       return;
     }
     pl_initialised = 1;
-    if (!load_router(project_root)) {
+    if (!load_router(project_root) || !load_command_modules(project_root)) {
       help_commands();
       return;
     }
@@ -163,7 +283,7 @@ void route_command(int argc, char *argv[], const char *project_root) {
   char *command = argv[1];
 
   if (strcmp(command, "init") == 0) {
-    init();
+    init(argc >= 3 ? argv[2] : ".");
     return;
   }
   if (strcmp(command, "copush") == 0 || strcmp(command, "commit") == 0) {

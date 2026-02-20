@@ -6,10 +6,10 @@
 %%   ArgvList: list of atoms from C argv (e.g. [iris, alias, add, [, git, push, ], &&, iris, copush])
 %%   GoalList: list of goal(Op, Command)
 %%     Op = and | or  (connective to previous goal)
-%%     Command = help | init | commit | rebuild | not(Inner) | alias_add(ArgList)
+%%     Command = help | init(Params) | commit(Params) | ... | not(Inner) | alias_add(ArgList)
 %%   C executes the chain: and = run and continue only on success; or = run and stop on success.
 
-:- multifile command_alias/2.
+:- multifile command_usage/3.  % (Canonical, Aliases, ParamSpec) from each module .pl
 
 %% --- Main entry: parse argv into list of goals ---
 iris_goals(Argv, GoalList) :-
@@ -65,7 +65,12 @@ take_until_closing([H|T], [H|L], R) :-
     H \= ']',
     take_until_closing(T, L, R).
 
-%% Parse one segment: optional leading 'not', then command (simple or prefix+params).
+%% take_params(ParamSpec, Params, Taken): consume tokens according to module spec.
+take_params([], _, []).
+take_params([optional], Params, Taken) :- ( Params = [P|_] -> Taken = [P] ; Taken = [] ).
+take_params([rest], Params, Params).
+
+%% Parse one segment: optional leading 'not', then command (with params from command_usage).
 parse_command([], help).
 parse_command([_], help).
 parse_command([not|Rest], not(Inner)) :-
@@ -73,26 +78,23 @@ parse_command([not|Rest], not(Inner)) :-
     !.
 parse_command([alias, add|Args], alias_add(Args)) :- !.
 parse_command([alias|_], help) :- !.
-parse_command([Cmd|_], Command) :-
-    command_alias(Cmd, Command),
+parse_command([Cmd|Params], Command) :-
+    command_usage(Canonical, Aliases, Spec),
+    member(Cmd, Aliases),
+    take_params(Spec, Params, Taken),
+    Command =.. [Canonical, Taken],
     !.
 parse_command([_|_], help).
 
-%% Backward compatibility: single command (no chain); unwrap not(.) for legacy callers
+%% Single-command lookup: returns functor atom for C (init, commit, help, ...).
 iris_command(Argv, Command) :-
     iris_goals(Argv, [goal(_, Cmd)|_]),
-    ( Cmd = not(_) -> Command = help  % legacy: not as unknown
+    ( Cmd = not(_)   -> Command = help
     ; Cmd = alias_add(_) -> Command = help
-    ; Command = Cmd
+    ; Cmd =.. [Command|_]  % compound: init([]), commit([]), etc.
     ),
     !.
 iris_command(Argv, help) :-
     iris_goals(Argv, []),
     !.
 iris_command(_, help).
-
-%% Aliases: map CLI tokens to canonical command atoms
-command_alias(init,   init).
-command_alias(commit, commit).
-command_alias(copush, commit).
-command_alias(rebuild, rebuild).
