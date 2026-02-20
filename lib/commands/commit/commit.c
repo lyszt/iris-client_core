@@ -12,6 +12,7 @@
 
 void commit_push() {
 	char commit_msg[1024];
+	iris_printf(IRIS_LOG_INFO, "WARNING: This will stage all changes, commit and push.\n");
 	iris_printf(IRIS_LOG_INFO, "Commiting... Please enter your commit message:\n");
 	if (fgets(commit_msg, sizeof(commit_msg), stdin) == NULL) {
 		iris_printf(IRIS_LOG_ERROR, "Failed to read commit message.\n");
