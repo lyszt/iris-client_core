@@ -34,7 +34,7 @@ Run without a command to see the usage line.
 |---------|---------|-----------|-------------|
 | `init` | — | `[PROJECT_NAME]` (optional) | Initialize an Iris project in the current directory. If `PROJECT_NAME` is omitted, `.` is used. |
 | `commit` | `copush` | — | Stage all changes, commit (prompts for message), and push. |
-| `rebuild` | — | — | Rebuild (project-specific). |
+| `rebuild` | — | — | Rebuild the Iris binary. |
 | `alias add` | — | `<name> do <cmd> do <cmd> ...` or `<name> "cmd1" "cmd2"` | Add a macro. Use `do` between commands (shell-friendly) or quote each command. |
 | `alias run` | — | `<name>` | Run a macro by name (executes each stored command line via `system()`). |
 

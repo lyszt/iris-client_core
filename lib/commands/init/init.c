@@ -22,8 +22,30 @@ void init(const char *project_name) {
         return;
     }
 
+    char *name = NULL;
+    if (project_name && project_name[0] != '\0') {
+        name = strdup(project_name);
+    } else {
+        char cwd[PATH_MAX];
+        if (getcwd(cwd, sizeof(cwd)) != NULL) {
+            const char *base = strrchr(cwd, '/');
+            if (base && base[1])
+                name = strdup(base + 1);
+            else if (strcmp(cwd, "/") == 0)
+                name = strdup("root");
+            else
+                name = strdup("project");
+        } else {
+            name = strdup("project");
+        }
+    }
+    if (!name) {
+        return_error();
+        return;
+    }
+
     struct iris_template tpl = {0};
-    tpl.project_name = strdup(project_name);
+    tpl.project_name = name;
     tpl.command_lines = calloc(1, sizeof(Command));
     if (!write_iris_template(".iris/.iris.macros", &tpl)) {
         free(tpl.project_name);
@@ -31,7 +53,7 @@ void init(const char *project_name) {
         return_error();
         return;
     }
+    iris_printf(IRIS_LOG_INFO, "Initialized IRIS project '%s' in the current directory.\n", name);
     free(tpl.project_name);
     free(tpl.command_lines);
-    iris_printf(IRIS_LOG_INFO, "Initialized IRIS project in the current directory.");
 }

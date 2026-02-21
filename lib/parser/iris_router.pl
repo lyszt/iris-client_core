@@ -51,13 +51,13 @@ drop_program_name([], []).
 drop_program_name([_|T], T).  % drop first token (program name, e.g. iris)
 
 %% take_params(ParamSpec, Params, Taken): consume tokens according to module spec.
+%% [optional] = 0 or 1 arg (e.g. init); missing param fallback is applied in C (e.g. init → folder name).
 take_params([], _, []).
 take_params([optional], Params, Taken) :- ( Params = [P|_] -> Taken = [P] ; Taken = [] ).
 take_params([rest], Params, Params).
 
 %% Parse one segment: optional leading 'not', then command (with params from command_usage).
 parse_command([], help).
-parse_command([_], help).
 parse_command([not|Rest], not(Inner)) :-
     parse_command(Rest, Inner),
     !.

@@ -16,7 +16,7 @@ Run `iris` with no arguments to see the usage line. The executable must be run f
 |---------|-------------|
 | `init [PROJECT_NAME]` | Initialize an Iris project in the current directory. Optional project name (default `.`). |
 | `commit` / `copush` | Stage all changes, prompt for a commit message, then commit and push (libgit2). |
-| `rebuild` | Project-specific rebuild. |
+| `rebuild` | Rebuild the Iris binary (runs CMake in the Iris source tree). |
 | `alias add <name> [cmd1] [cmd2] ...` | Add a macro: first argument is the name, rest are command lines (use brackets for multi-word commands). |
 | `alias run <name>` | Run the named macro (each stored line is executed with `system()`). |
 

@@ -189,7 +189,7 @@ static int run_one_cmd(term_t cmd_ref, const char *project_root) {
       }
       int ok = 0;
       if (strcmp(functor, "init") == 0) {
-        init(argc >= 1 ? argv[0] : ".");
+        init(argc >= 1 ? argv[0] : NULL);
         ok = 1;
       } else if (strcmp(functor, "commit") == 0) {
         commit_push();
