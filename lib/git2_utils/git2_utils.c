@@ -4,6 +4,8 @@
 #include <string.h>
 #include <git2.h>
 #include <stdio.h>
+#include "utils.h"
+#include <limits.h>
 
 int iris_git_commit_and_push(const char *repo_path, const char *message) {
     git_libgit2_init();
@@ -12,6 +14,7 @@ int iris_git_commit_and_push(const char *repo_path, const char *message) {
     git_oid tree_id, commit_id;
     git_tree *tree = NULL;
     git_signature *sig = NULL;
+    
 
     if (git_repository_open(&repo, repo_path) < 0) {
         iris_printf(IRIS_LOG_ERROR, "Could not open repo at %s\n", repo_path);
@@ -20,6 +23,7 @@ int iris_git_commit_and_push(const char *repo_path, const char *message) {
 
     git_repository_index(&index, repo);
     git_index_add_all(index, NULL, 0, NULL, NULL);
+    git_index_remove_directory(index, ".iris", 0);
     git_index_write(index);
     git_index_write_tree(&tree_id, index);
     git_tree_lookup(&tree, repo, &tree_id);
