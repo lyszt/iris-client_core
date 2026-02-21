@@ -23,7 +23,7 @@ add_executable(iris ${IRISCLI_SRC})
 # Find dependencies
 find_package(CURL REQUIRED)
 
-# SWI-Prolog (embedded). If not found, parser falls back to C-only router.
+# SWI-Prolog (embedded) is required; no C fallback.
 find_package(PkgConfig QUIET)
 if(PkgConfig_FOUND)
   pkg_check_modules(SWIPL QUIET swipl)
@@ -37,13 +37,24 @@ if(NOT SWIPL_FOUND)
     set(SWIPL_FOUND TRUE)
   endif()
 endif()
+# Prefer full path for linking so the linker always finds libswipl
+if(SWIPL_FOUND AND NOT SWIPL_LIBRARY)
+  find_library(SWIPL_LIBRARY NAMES swipl)
+endif()
 if(SWIPL_FOUND)
   target_compile_definitions(iris PRIVATE IRIS_USE_PROLOG=1)
   target_include_directories(iris PRIVATE ${SWIPL_INCLUDE_DIRS})
-  target_link_libraries(iris PRIVATE ${SWIPL_LIBRARIES})
+  if(SWIPL_LIBRARY_DIRS)
+    target_link_directories(iris PRIVATE ${SWIPL_LIBRARY_DIRS})
+  endif()
+  if(SWIPL_LIBRARY)
+    target_link_libraries(iris PRIVATE ${SWIPL_LIBRARY})
+  else()
+    target_link_libraries(iris PRIVATE ${SWIPL_LIBRARIES})
+  endif()
   message(STATUS "Iris: using Prolog command router (SWI-Prolog)")
 else()
-  message(STATUS "Iris: SWI-Prolog not found; using C-only command router. Install libswipl-dev for Prolog router.")
+  message(FATAL_ERROR "Iris requires SWI-Prolog. Install it (e.g. libswipl-dev on Debian/Ubuntu, swi-prolog on Fedora/Arch) and re-run CMake.")
 endif()
 
 # Make sure the project uses our include directory and libgit2
@@ -64,11 +75,11 @@ set_target_properties(iris PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}"
 )
 
-# Write project root to iris.conf in $HOME/.config/iris-cli during build
+# Write project root to iris.conf in $HOME/.config/iris-cli during build (optional; do not fail the build)
 add_custom_command(
   TARGET iris POST_BUILD
-  COMMAND mkdir -p "$ENV{HOME}/.config/iris-cli" && echo "PATH=${PROJECT_SOURCE_DIR}" > "$ENV{HOME}/.config/iris-cli/iris.conf"
-  COMMENT "Writing project root to $HOME/.config/iris-cli/iris.conf"
+  COMMAND ${CMAKE_COMMAND} -E env HOME=$ENV{HOME} sh -c "mkdir -p \"$$HOME/.config/iris-cli\" && echo 'PATH=${PROJECT_SOURCE_DIR}' > \"$$HOME/.config/iris-cli/iris.conf\"" || true
+  COMMENT "Writing project root to $HOME/.config/iris-cli/iris.conf (optional)"
 )
 
 # Install target (optional)

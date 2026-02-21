@@ -4,7 +4,9 @@
 #include "commands/rebuild/rebuild.h"
 #include "commands/commit/commit.h"
 #include "commands/alias/add/alias_add.h"
+#include "commands/alias/run/alias_run.h"
 #include <limits.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -14,13 +16,34 @@
 
 static int pl_initialised = 0;
 
+/* If the pending exception is error(iris_syntax(Message)), print it to stderr and clear; return 1. Else return 0. */
+static int pl_print_iris_syntax_error(void) {
+  term_t ex = PL_exception(0);
+  if (!ex || !PL_is_compound(ex)) return 0;
+  atom_t name;
+  size_t arity;
+  if (!PL_get_name_arity(ex, &name, &arity) || arity != 1) return 0;
+  if (strcmp(PL_atom_chars(name), "error") != 0) return 0;
+  term_t a1 = PL_new_term_ref();
+  if (!PL_get_arg(1, ex, a1)) return 0;
+  if (!PL_is_compound(a1) || !PL_get_name_arity(a1, &name, &arity) || arity != 1) return 0;
+  if (strcmp(PL_atom_chars(name), "iris_syntax") != 0) return 0;
+  term_t msg_ref = PL_new_term_ref();
+  if (!PL_get_arg(1, a1, msg_ref)) return 0;
+  char *msg = NULL;
+  if (!PL_get_atom_chars(msg_ref, &msg)) return 0;
+  fprintf(stderr, "iris: syntax error: %s\n", msg);
+  PL_clear_exception();
+  return 1;
+}
+
 /* Build a Prolog list of atoms from argv[0..argc-1]. List is built in term ref L. */
 static void put_argv_list(term_t L, int argc, char *argv[]) {
   term_t a = PL_new_term_ref();
   PL_put_nil(L);
   for (int i = argc - 1; i >= 0; i--) {
     PL_put_atom_chars(a, argv[i]);
-    PL_cons_list(L, a, L);
+    { int _r = PL_cons_list(L, a, L); (void)_r; }
   }
 }
 
@@ -147,17 +170,17 @@ static int run_one_cmd(term_t cmd_ref, const char *project_root) {
   }
   if (PL_is_compound(cmd_ref)) {
     atom_t name_atom;
-    int arity;
+    size_t arity;
     if (!PL_get_name_arity(cmd_ref, &name_atom, &arity)) return 0;
     const char *functor = PL_atom_chars(name_atom);
     if (functor && strcmp(functor, "not") == 0 && arity == 1) {
       term_t inner = PL_new_term_ref();
-      PL_get_arg(1, cmd_ref, inner);
+      if (!PL_get_arg(1, cmd_ref, inner)) return 0;
       return run_one_cmd(inner, project_root) ? 0 : 1;
     }
     if (functor && arity == 1) {
       term_t params_ref = PL_new_term_ref();
-      PL_get_arg(1, cmd_ref, params_ref);
+      if (!PL_get_arg(1, cmd_ref, params_ref)) return 0;
       int argc = 0;
       char **argv = NULL;
       if (!pl_list_to_argv(params_ref, &argc, &argv)) {
@@ -177,6 +200,9 @@ static int run_one_cmd(term_t cmd_ref, const char *project_root) {
       } else if (strcmp(functor, "alias_add") == 0) {
         alias_add(argc, argv);
         ok = 1;
+      } else if (strcmp(functor, "alias_run") == 0) {
+        alias_run(argc, argv);
+        ok = 1;
       }
       free_argv(argc, argv);
       if (ok) return 1;
@@ -194,54 +220,58 @@ static void run_goals_via_prolog(int argc, char *argv[], const char *project_roo
 
   predicate_t iris_goals_pred = PL_predicate("iris_goals", 2, "user");
   term_t args = PL_new_term_refs(2);
-  PL_put_term(args, argv_list);
+  { int _r = PL_put_term(args, argv_list); (void)_r; }
   PL_put_variable(args + 1);
 
   if (!PL_call_predicate(NULL, PL_Q_NODEBUG | PL_Q_CATCH_EXCEPTION, iris_goals_pred, args)) {
-    help_commands();
+    if (!pl_print_iris_syntax_error())
+      help_commands();
     return;
   }
-  PL_put_term(goal_list_ref, args + 1);
+  { int _r = PL_put_term(goal_list_ref, args + 1); (void)_r; }
 
   term_t head = PL_new_term_ref();
   term_t tail = PL_new_term_ref();
   term_t list_cursor = PL_new_term_ref();
-  PL_put_term(list_cursor, goal_list_ref);
+  { int _r = PL_put_term(list_cursor, goal_list_ref); (void)_r; }
 
   int prev_success = 1; /* so first goal always runs */
   while (PL_get_list(list_cursor, head, tail)) {
-    int goal_arity;
+    size_t goal_arity;
     atom_t goal_name;
     if (!PL_is_compound(head) || !PL_get_name_arity(head, &goal_name, &goal_arity) || goal_arity != 2) {
-      PL_put_term(list_cursor, tail);
+      { int _r = PL_put_term(list_cursor, tail); (void)_r; }
       continue;
     }
     term_t op_ref = PL_new_term_ref();
     term_t cmd_ref = PL_new_term_ref();
-    PL_get_arg(1, head, op_ref);
-    PL_get_arg(2, head, cmd_ref);
+    if (!PL_get_arg(1, head, op_ref) || !PL_get_arg(2, head, cmd_ref)) {
+      { int _r = PL_put_term(list_cursor, tail); (void)_r; }
+      continue;
+    }
 
     char *op_str = NULL;
-    (void)PL_get_atom_chars(op_ref, &op_str);
+    { int _r = PL_get_atom_chars(op_ref, &op_str); (void)_r; }
     int is_and = op_str && strcmp(op_str, "and") == 0;
     int is_or  = op_str && strcmp(op_str, "or") == 0;
 
-    if (is_and && !prev_success) { PL_put_term(list_cursor, tail); continue; }
-    if (is_or && prev_success)  { PL_put_term(list_cursor, tail); continue; }
+    if (is_and && !prev_success) { { int _r = PL_put_term(list_cursor, tail); (void)_r; } continue; }
+    if (is_or && prev_success)  { { int _r = PL_put_term(list_cursor, tail); (void)_r; } continue; }
 
     prev_success = run_one_cmd(cmd_ref, project_root);
-    PL_put_term(list_cursor, tail);
+    { int _r = PL_put_term(list_cursor, tail); (void)_r; }
   }
 }
 
 /* Legacy: resolve single command into buf (for callers that need one atom). */
+__attribute__((unused))
 static int resolve_command_via_prolog(int argc, char *argv[], char *buf, size_t bufsize) {
   term_t argv_list = PL_new_term_ref();
   put_argv_list(argv_list, argc, argv);
 
   predicate_t iris_cmd = PL_predicate("iris_command", 2, "user");
   term_t args = PL_new_term_refs(2);
-  PL_put_term(args, argv_list);
+  { int _r = PL_put_term(args, argv_list); (void)_r; }
   PL_put_variable(args + 1);
 
   if (!PL_call_predicate(NULL, PL_Q_NODEBUG | PL_Q_CATCH_EXCEPTION, iris_cmd, args)) {
@@ -266,34 +296,21 @@ void route_command(int argc, char *argv[], const char *project_root) {
       return;
     }
     pl_initialised = 1;
-    if (!load_router(project_root) || !load_command_modules(project_root)) {
+    if (!load_router(project_root)) {
+      fprintf(stderr, "Iris: failed to load router at %s/lib/parser/iris_router.pl\n", project_root);
+      help_commands();
+      return;
+    }
+    if (!load_command_modules(project_root)) {
+      fprintf(stderr, "Iris: failed to load command modules from %s/lib/commands/\n", project_root);
       help_commands();
       return;
     }
   }
 
   run_goals_via_prolog(argc, argv, project_root);
-#else
-  /* C-only fallback when SWI-Prolog is not available */
-  if (argc < 2) {
-    help_commands();
-    return;
-  }
 
-  char *command = argv[1];
+  // Fallback has been removed because Iris is better than this.
 
-  if (strcmp(command, "init") == 0) {
-    init(argc >= 3 ? argv[2] : ".");
-    return;
-  }
-  if (strcmp(command, "copush") == 0 || strcmp(command, "commit") == 0) {
-    commit_push();
-    return;
-  }
-  if (strcmp(command, "rebuild") == 0) {
-    rebuild(project_root);
-    return;
-  }
-  help_commands();
 #endif
 }

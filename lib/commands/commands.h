@@ -2,7 +2,7 @@
 #define COMMANDS_H
 
 
-void help_commands();
+void help_commands(void);
 
 
 #endif 
