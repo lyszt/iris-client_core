@@ -5,6 +5,7 @@
 #include "commands/commit/commit.h"
 #include "commands/alias/add/alias_add.h"
 #include "commands/alias/run/alias_run.h"
+#include "commands/root/root.h"
 #include <limits.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -66,6 +67,7 @@ static int load_command_modules(const char *project_root) {
     "lib/commands/commit/commit.pl",
     "lib/commands/rebuild/rebuild.pl",
     "lib/commands/alias/add/alias_add.pl",
+    "lib/commands/root/root.pl",
   };
   for (size_t i = 0; i < sizeof(modules) / sizeof(modules[0]); i++) {
     char path[PATH_MAX];
@@ -203,6 +205,9 @@ static int run_one_cmd(term_t cmd_ref, const char *project_root) {
       } else if (strcmp(functor, "alias_run") == 0) {
         alias_run(argc, argv);
         ok = 1;
+      } else if (strcmp(functor, "root") == 0) {
+        root(project_root);
+        ok = 1;
       }
       free_argv(argc, argv);
       if (ok) return 1;
@@ -288,9 +293,8 @@ static int resolve_command_via_prolog(int argc, char *argv[], char *buf, size_t 
 void route_command(int argc, char *argv[], const char *project_root) {
 #ifdef IRIS_USE_PROLOG
   if (!pl_initialised) {
-    /* Initialise Prolog with minimal argv so it finds the executable but doesn't consume our args */
-    char *av[] = { (char *)(argv && argv[0] ? argv[0] : "iris"), NULL };
-    int ac = 1;
+    char *av[] = { (char *)(argv && argv[0] ? argv[0] : "iris"), "-q", NULL };
+    int ac = 2;
     if (!PL_initialise(ac, av)) {
       help_commands();
       return;
