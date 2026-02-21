@@ -56,7 +56,5 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    route_command(argc, argv, project_root);
-    
-    return 0;
+    return route_command(argc, argv, project_root) ? 0 : 1;
 }

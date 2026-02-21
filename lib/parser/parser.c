@@ -217,8 +217,8 @@ static int run_one_cmd(term_t cmd_ref, const char *project_root) {
   return 0;
 }
 
-/* Call iris_goals(Argv, GoalList) and run the goal chain (and/or/not). */
-static void run_goals_via_prolog(int argc, char *argv[], const char *project_root) {
+/* Call iris_goals(Argv, GoalList) and run the goal chain (and/or/not). Returns 1 on success, 0 on failure. */
+static int run_goals_via_prolog(int argc, char *argv[], const char *project_root) {
   term_t argv_list = PL_new_term_ref();
   term_t goal_list_ref = PL_new_term_ref();
   put_argv_list(argv_list, argc, argv);
@@ -231,7 +231,7 @@ static void run_goals_via_prolog(int argc, char *argv[], const char *project_roo
   if (!PL_call_predicate(NULL, PL_Q_NODEBUG | PL_Q_CATCH_EXCEPTION, iris_goals_pred, args)) {
     if (!pl_print_iris_syntax_error())
       help_commands();
-    return;
+    return 0;
   }
   { int _r = PL_put_term(goal_list_ref, args + 1); (void)_r; }
 
@@ -266,6 +266,7 @@ static void run_goals_via_prolog(int argc, char *argv[], const char *project_roo
     prev_success = run_one_cmd(cmd_ref, project_root);
     { int _r = PL_put_term(list_cursor, tail); (void)_r; }
   }
+  return prev_success;
 }
 
 /* Legacy: resolve single command into buf (for callers that need one atom). */
@@ -290,31 +291,33 @@ static int resolve_command_via_prolog(int argc, char *argv[], char *buf, size_t 
 }
 #endif
 
-void route_command(int argc, char *argv[], const char *project_root) {
+int route_command(int argc, char *argv[], const char *project_root) {
 #ifdef IRIS_USE_PROLOG
   if (!pl_initialised) {
     char *av[] = { (char *)(argv && argv[0] ? argv[0] : "iris"), "-q", NULL };
     int ac = 2;
     if (!PL_initialise(ac, av)) {
       help_commands();
-      return;
+      return 0;
     }
     pl_initialised = 1;
     if (!load_router(project_root)) {
       fprintf(stderr, "Iris: failed to load router at %s/lib/parser/iris_router.pl\n", project_root);
       help_commands();
-      return;
+      return 0;
     }
     if (!load_command_modules(project_root)) {
       fprintf(stderr, "Iris: failed to load command modules from %s/lib/commands/\n", project_root);
       help_commands();
-      return;
+      return 0;
     }
   }
 
-  run_goals_via_prolog(argc, argv, project_root);
-
-  // Fallback has been removed because Iris is better than this.
-
+  return run_goals_via_prolog(argc, argv, project_root);
+#else
+  (void)argc;
+  (void)argv;
+  (void)project_root;
+  return 0;
 #endif
 }
