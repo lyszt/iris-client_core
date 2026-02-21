@@ -36,11 +36,10 @@ void commit_push() {
 		return;
 
 	char final_msg[1024];
-
-	if (choice == 0)
-		snprintf(final_msg, sizeof(final_msg), "fix: %s", commit_msg);
+	if (choice >= 0 && options[choice])
+		snprintf(final_msg, sizeof(final_msg), "%s: %s", options[choice], commit_msg);
 	else
-		snprintf(final_msg, sizeof(final_msg), "feat: %s", commit_msg);
+		snprintf(final_msg, sizeof(final_msg), "%s", commit_msg);
 
 	// Use libgit2 for commit and push
 	int ret = iris_git_commit_and_push(".", final_msg);
