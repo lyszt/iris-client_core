@@ -3,4 +3,6 @@
 
 void init(const char *project_name);
 
+void write_iris_to_exclude();
+
 #endif
