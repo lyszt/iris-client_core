@@ -195,6 +195,29 @@ void free_macros(iris_macro *macros, size_t num_macros) {
     free(macros);
 }
 
+/* Deep-copy one macro. Returns 1 on success, 0 on alloc failure (caller must free partial). */
+static int copy_one_macro(const iris_macro *src, iris_macro *dst) {
+    dst->name = strdup(src->name);
+    if (!dst->name) return 0;
+    dst->n = src->n;
+    if (src->n == 0) {
+        dst->lines = NULL;
+        return 1;
+    }
+    dst->lines = malloc(src->n * sizeof(char *));
+    if (!dst->lines) { free(dst->name); return 0; }
+    for (size_t i = 0; i < src->n; i++) {
+        dst->lines[i] = src->lines[i] ? strdup(src->lines[i]) : NULL;
+        if (src->lines[i] && !dst->lines[i]) {
+            while (i > 0) free(dst->lines[--i]);
+            free(dst->lines);
+            free(dst->name);
+            return 0;
+        }
+    }
+    return 1;
+}
+
 int append_macro(const char *filepath, const char *name, char **lines, size_t n) {
     struct iris_template tpl = {0};
     iris_macro *macros = NULL;
@@ -219,34 +242,57 @@ int append_macro(const char *filepath, const char *name, char **lines, size_t n)
     if (!read_macros_section(f, &macros, &num_macros)) { fclose(f); return 0; }
     fclose(f);
 
-    size_t new_n = num_macros + 1;
-    iris_macro *new_macros = realloc(macros, new_n * sizeof(iris_macro));
-    if (!new_macros) { free_macros(macros, num_macros); return 0; }
-    macros = new_macros;
-    macros[num_macros].name = strdup(name);
-    if (!macros[num_macros].name) { free_macros(macros, new_n); return 0; }
-    macros[num_macros].n = n;
-    macros[num_macros].lines = malloc(n * sizeof(char *));
-    if (!macros[num_macros].lines) { free(macros[num_macros].name); free_macros(macros, num_macros); return 0; }
+    /* Replace semantics: drop any existing macro with the same name. */
+    size_t keep_count = 0;
+    for (size_t i = 0; i < num_macros; i++) {
+        if (strcmp(macros[i].name, name) != 0)
+            keep_count++;
+    }
+    size_t new_n = keep_count + 1;
+    iris_macro *new_macros = malloc(new_n * sizeof(iris_macro));
+    if (!new_macros) { free_macros(macros, num_macros); free(tpl.project_name); if (tpl.command_lines) free(tpl.command_lines); return 0; }
+    size_t j = 0;
+    for (size_t i = 0; i < num_macros; i++) {
+        if (strcmp(macros[i].name, name) != 0) {
+            if (!copy_one_macro(&macros[i], &new_macros[j])) {
+                free_macros(new_macros, j);
+                free_macros(macros, num_macros);
+                free(tpl.project_name);
+                if (tpl.command_lines) free(tpl.command_lines);
+                return 0;
+            }
+            j++;
+        }
+    }
+    free_macros(macros, num_macros);
+    macros = NULL;
+
+    new_macros[keep_count].name = strdup(name);
+    if (!new_macros[keep_count].name) { free_macros(new_macros, keep_count); free(tpl.project_name); if (tpl.command_lines) free(tpl.command_lines); return 0; }
+    new_macros[keep_count].n = n;
+    new_macros[keep_count].lines = malloc(n * sizeof(char *));
+    if (!new_macros[keep_count].lines) { free(new_macros[keep_count].name); free_macros(new_macros, keep_count); free(tpl.project_name); if (tpl.command_lines) free(tpl.command_lines); return 0; }
     for (size_t i = 0; i < n; i++) {
-        macros[num_macros].lines[i] = lines[i] ? strdup(lines[i]) : NULL;
-        if (lines[i] && !macros[num_macros].lines[i]) {
-            while (i > 0) free(macros[num_macros].lines[--i]);
-            free(macros[num_macros].lines);
-            free(macros[num_macros].name);
-            free_macros(macros, num_macros);
+        new_macros[keep_count].lines[i] = lines[i] ? strdup(lines[i]) : NULL;
+        if (lines[i] && !new_macros[keep_count].lines[i]) {
+            while (i > 0) free(new_macros[keep_count].lines[--i]);
+            free(new_macros[keep_count].lines);
+            free(new_macros[keep_count].name);
+            free_macros(new_macros, keep_count);
+            free(tpl.project_name);
+            if (tpl.command_lines) free(tpl.command_lines);
             return 0;
         }
     }
 
     f = fopen(filepath, "wb");
-    if (!f) { free_macros(macros, new_n); return 0; }
-    if (!write_template_part(f, &tpl)) { fclose(f); free_macros(macros, new_n); return 0; }
-    if (!write_macros_section(f, macros, new_n)) { fclose(f); free_macros(macros, new_n); return 0; }
+    if (!f) { free_macros(new_macros, new_n); free(tpl.project_name); if (tpl.command_lines) free(tpl.command_lines); return 0; }
+    if (!write_template_part(f, &tpl)) { fclose(f); free_macros(new_macros, new_n); free(tpl.project_name); if (tpl.command_lines) free(tpl.command_lines); return 0; }
+    if (!write_macros_section(f, new_macros, new_n)) { fclose(f); free_macros(new_macros, new_n); free(tpl.project_name); if (tpl.command_lines) free(tpl.command_lines); return 0; }
     fclose(f);
 
     free(tpl.project_name);
     if (tpl.command_lines) free(tpl.command_lines);
-    free_macros(macros, new_n);
+    free_macros(new_macros, new_n);
     return 1;
 }

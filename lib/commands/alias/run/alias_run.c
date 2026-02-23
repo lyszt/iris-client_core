@@ -7,9 +7,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <unistd.h>
 
 /* Macros are in the binary file .iris/.iris.macros (same file init creates). */
 static const char *macro_suffix = "/.iris/.iris.macros";
+
+#define MAX_CMD_LINE 4096
 
 static void err(const char *fmt, ...) {
     va_list ap;
@@ -44,10 +47,32 @@ void alias_run(int argc, char **argv) {
         return;
     }
 
+    char exec_path[PATH_MAX];
+    exec_path[0] = '\0';
+#if defined(__linux__)
+    {
+        ssize_t len = readlink("/proc/self/exe", exec_path, sizeof(exec_path) - 1);
+        if (len > 0) {
+            exec_path[len] = '\0';
+        }
+    }
+#endif
+
     for (size_t i = 0; i < n; i++) {
         if (!lines[i] || !lines[i][0]) continue;
+        const char *run = lines[i];
+        char buf[MAX_CMD_LINE];
+        if (exec_path[0]) {
+            if (strcmp(lines[i], "iris") == 0) {
+                run = exec_path;
+            } else if (strncmp(lines[i], "iris ", 5) == 0) {
+                int need = snprintf(buf, sizeof(buf), "%s %s", exec_path, lines[i] + 5);
+                if (need > 0 && (size_t)need < sizeof(buf))
+                    run = buf;
+            }
+        }
         fflush(stdout);
-        int ret = system(lines[i]);
+        int ret = system(run);
         fflush(stdout);
         if (ret != 0)
             err("iris: command exited %d: %s\n", ret, lines[i]);
