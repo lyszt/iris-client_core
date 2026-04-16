@@ -65,7 +65,8 @@ set(LIBGIT2_DIR vendor/libgit2-${LIBGIT2_VERSION})
 # Build and link libgit2 statically from vendor
 add_subdirectory(${LIBGIT2_DIR})
 target_include_directories(iris PRIVATE ${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/include)
-target_link_libraries(iris PRIVATE git2 CURL::libcurl)
+find_library(READLINE_LIBRARY NAMES readline REQUIRED)
+target_link_libraries(iris PRIVATE git2 CURL::libcurl ${READLINE_LIBRARY})
 
 # Compiler flags (add -Wall by default)
 target_compile_options(iris PRIVATE -Wall)

@@ -6,6 +6,7 @@
 #include "commands/alias/add/alias_add.h"
 #include "commands/alias/run/alias_run.h"
 #include "commands/root/root.h"
+#include "commands/ignore/ignore.h"
 #include <limits.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -68,6 +69,7 @@ static int load_command_modules(const char *project_root) {
     "lib/commands/rebuild/rebuild.pl",
     "lib/commands/alias/add/alias_add.pl",
     "lib/commands/root/root.pl",
+    "lib/commands/ignore/ignore.pl",
   };
   for (size_t i = 0; i < sizeof(modules) / sizeof(modules[0]); i++) {
     char path[PATH_MAX];
@@ -207,6 +209,9 @@ static int run_one_cmd(term_t cmd_ref, const char *project_root) {
         ok = 1;
       } else if (strcmp(functor, "root") == 0) {
         root(project_root);
+        ok = 1;
+      } else if (strcmp(functor, "ignore") == 0) {
+        iris_ignore(argc, argv);
         ok = 1;
       }
       free_argv(argc, argv);
