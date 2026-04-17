@@ -5,12 +5,22 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <termios.h>
 #include <errno.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include "git2_utils/git2_utils.h"
 #include "components/select.h"
 #include "utils.h"
 
 #define MAX_MSG    4096
+#define SUBJECT_LIMIT 72
+
+/* readline prompt sequences — \001/\002 hide invisible chars from width calc */
+#define RL_CYAN  "\001\x1b[36m\002"
+#define RL_BOLD  "\001\x1b[1m\002"
+#define RL_DIM   "\001\x1b[2m\002"
+#define RL_RESET "\001\x1b[0m\002"
 
 static void save_cache(const char *iris_root, const char *msg) {
 	char path[PATH_MAX];
@@ -30,71 +40,14 @@ static int load_cache(const char *iris_root, char *buf, size_t sz) {
 	return n > 0;
 }
 
-static void write_template(FILE *f, const char *type) {
-	fprintf(f,
-		"%s: \n"
-		"\n"
-		"# Write your commit message above. Lines starting with '#' are ignored.\n"
-		"#\n"
-		"# First line format:  type(optional-scope): short description (max 72 chars)\n"
-		"# Leave a blank line, then add a longer description below if needed.\n"
-		"# Footer examples:\n"
-		"#   BREAKING CHANGE: describe what breaks\n"
-		"#   Closes #42\n"
-		"#\n"
-		"# Types: feat, fix, chore, refactor, docs, test, perf, style, build,\n"
-		"#        ci, revert, wip, merge, release, security, deps, infra, ux,\n"
-		"#        i18n, hotfix\n",
-		type
-	);
-}
-
-static int open_editor(const char *path) {
-	const char *editor = getenv("VISUAL");
-	if (!editor || !editor[0]) editor = getenv("EDITOR");
-
-	if (editor && editor[0]) {
-		char cmd[PATH_MAX + 128];
-		snprintf(cmd, sizeof(cmd), "%s \"%s\"", editor, path);
-		return system(cmd);
+static char *prompt_required(const char *label) {
+	char *s;
+	while (1) {
+		s = readline(label);
+		if (s && s[0]) return s;
+		iris_printf(IRIS_LOG_ERROR, "This field is required.\n");
+		free(s);
 	}
-
-	/* try common editors in order */
-	const char *fallbacks[] = { "vim", "nano", "vi", NULL };
-	for (int i = 0; fallbacks[i]; i++) {
-		char which_cmd[64];
-		snprintf(which_cmd, sizeof(which_cmd), "command -v %s >/dev/null 2>&1", fallbacks[i]);
-		if (system(which_cmd) == 0) {
-			char cmd[PATH_MAX + 128];
-			snprintf(cmd, sizeof(cmd), "%s \"%s\"", fallbacks[i], path);
-			return system(cmd);
-		}
-	}
-
-	iris_printf(IRIS_LOG_ERROR, "No editor found. Set $VISUAL or $EDITOR.\n");
-	return 1;
-}
-
-static int read_commit_msg(const char *path, char *buf, size_t sz) {
-	FILE *f = fopen(path, "r");
-	if (!f) return 0;
-
-	size_t pos = 0;
-	char line[1024];
-	while (fgets(line, sizeof(line), f)) {
-		if (line[0] == '#') continue;
-		size_t len = strlen(line);
-		if (pos + len >= sz - 1) break;
-		memcpy(buf + pos, line, len);
-		pos += len;
-	}
-	fclose(f);
-
-	/* trim trailing whitespace */
-	while (pos > 0 && (buf[pos-1] == '\n' || buf[pos-1] == '\r' || buf[pos-1] == ' '))
-		pos--;
-	buf[pos] = '\0';
-	return pos > 0;
 }
 
 void commit_push(int argc, char **argv) {
@@ -120,10 +73,10 @@ void commit_push(int argc, char **argv) {
 			return;
 		}
 
-		iris_printf(IRIS_LOG_WARN, "This will stage all changes, commit and push.\n");
+		iris_printf(IRIS_LOG_WARN, "This will stage all changes, commit and push.\n\n");
 
 		/* commit type */
-		iris_printf(IRIS_LOG_INFO, "Select the type of commit:");
+		iris_printf(IRIS_LOG_INFO, "Select the type of commit:\n");
 		const char *options[] = {
 			"feat", "fix", "chore", "refactor", "docs", "test", "perf", "style", "build",
 			"ci", "revert", "wip", "merge", "release", "security", "deps", "infra", "ux",
@@ -132,40 +85,48 @@ void commit_push(int argc, char **argv) {
 		int choice = summon_select(options);
 		const char *type = (choice >= 0 && options[choice]) ? options[choice] : "chore";
 
-		/* write template to a temp file and open the user's editor */
-		char tmppath[] = "/tmp/iris_commit_XXXXXX";
-		int fd = mkstemp(tmppath);
-		if (fd == -1) {
-			iris_printf(IRIS_LOG_ERROR, "Failed to create temp file: %s\n", strerror(errno));
-			return;
-		}
-		FILE *tmpf = fdopen(fd, "w");
-		if (!tmpf) {
-			close(fd);
-			iris_printf(IRIS_LOG_ERROR, "Failed to open temp file.\n");
-			return;
-		}
-		write_template(tmpf, type);
-		fclose(tmpf);
+		/* optional scope */
+		char *scope_raw = readline("\n" RL_CYAN "  scope  " RL_RESET RL_DIM " (optional) " RL_RESET ": ");
+		char scope_buf[128] = {0};
+		if (scope_raw && scope_raw[0])
+			snprintf(scope_buf, sizeof(scope_buf), "(%s)", scope_raw);
+		free(scope_raw);
 
-		if (open_editor(tmppath) != 0) {
-			iris_printf(IRIS_LOG_ERROR, "Editor exited with an error.\n");
-			unlink(tmppath);
-			return;
+		/* short description, max 72 chars */
+		char *subject = NULL;
+		while (1) {
+			subject = prompt_required(RL_CYAN "  subject " RL_RESET ": ");
+			int len = (int)strlen(subject);
+			if (len <= SUBJECT_LIMIT) break;
+			iris_printf(IRIS_LOG_WARN, "  Too long (%d chars). Please shorten to %d.\n", len, SUBJECT_LIMIT);
+			free(subject);
+			subject = NULL;
 		}
 
-		if (!read_commit_msg(tmppath, final_msg, sizeof(final_msg)) || !final_msg[0]) {
-			iris_printf(IRIS_LOG_WARN, "Commit aborted — empty message.\n");
-			unlink(tmppath);
-			return;
-		}
-		unlink(tmppath);
+		/* issue references */
+		char *issues_raw = readline(RL_CYAN "  closes  " RL_RESET RL_DIM " (optional) " RL_RESET ": ");
+		char issues_buf[256] = {0};
+		if (issues_raw && issues_raw[0])
+			snprintf(issues_buf, sizeof(issues_buf), "%s", issues_raw);
+		free(issues_raw);
+
+		/* Build conventional commit message */
+		int pos = snprintf(final_msg, sizeof(final_msg), "%s%s: %s", type, scope_buf, subject);
+		free(subject);
+
+		if (issues_buf[0])
+			pos += snprintf(final_msg + pos, sizeof(final_msg) - (size_t)pos, "\nCloses %s", issues_buf);
 	}
 
 	if (has_root)
 		save_cache(iris_root, final_msg);
 
+	iris_printf(IRIS_LOG_DEBUG, "\n  committing: ");
+	iris_printf(IRIS_LOG_CMD, "%s\n\n", final_msg);
+
 	int ret = iris_git_commit_and_push(".", final_msg);
 	if (ret != 0)
 		iris_printf(IRIS_LOG_ERROR, "Git commit/push failed.\n");
+	else
+		iris_printf(IRIS_LOG_INFO, "  pushed.\n");
 }
