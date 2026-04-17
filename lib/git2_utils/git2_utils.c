@@ -7,6 +7,31 @@
 #include "utils.h"
 #include <limits.h>
 
+int iris_git_has_changes(const char *repo_path) {
+    git_libgit2_init();
+    git_repository *repo = NULL;
+    git_status_list *status_list = NULL;
+    int has_changes = 0;
+
+    if (git_repository_open_ext(&repo, repo_path, 0, NULL) < 0)
+        goto done;
+
+    git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+    opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+    opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED | GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+
+    if (git_status_list_new(&status_list, repo, &opts) < 0)
+        goto done;
+
+    has_changes = (int)git_status_list_entrycount(status_list) > 0;
+
+done:
+    if (status_list) git_status_list_free(status_list);
+    if (repo) git_repository_free(repo);
+    git_libgit2_shutdown();
+    return has_changes;
+}
+
 int iris_git_commit_and_push(const char *repo_path, const char *message) {
     git_libgit2_init();
     git_repository *repo = NULL;

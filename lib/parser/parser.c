@@ -196,7 +196,7 @@ static int run_one_cmd(term_t cmd_ref, const char *project_root) {
         init(argc >= 1 ? argv[0] : NULL);
         ok = 1;
       } else if (strcmp(functor, "commit") == 0) {
-        commit_push();
+        commit_push(argc, argv);
         ok = 1;
       } else if (strcmp(functor, "rebuild") == 0) {
         rebuild(project_root);
