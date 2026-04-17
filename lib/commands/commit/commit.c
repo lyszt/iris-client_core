@@ -5,16 +5,12 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
-#include <termios.h>
 #include <errno.h>
-#include <readline/readline.h>
-#include <readline/history.h>
 #include "git2_utils/git2_utils.h"
 #include "components/select.h"
 #include "utils.h"
 
 #define MAX_MSG    4096
-#define SUBJECT_LIMIT 72
 
 static void save_cache(const char *iris_root, const char *msg) {
 	char path[PATH_MAX];
@@ -34,14 +30,71 @@ static int load_cache(const char *iris_root, char *buf, size_t sz) {
 	return n > 0;
 }
 
-static char *prompt_required(const char *label) {
-	char *s;
-	while (1) {
-		s = readline(label);
-		if (s && s[0]) return s;
-		iris_printf(IRIS_LOG_ERROR, "This field is required.\n");
-		free(s);
+static void write_template(FILE *f, const char *type) {
+	fprintf(f,
+		"%s: \n"
+		"\n"
+		"# Write your commit message above. Lines starting with '#' are ignored.\n"
+		"#\n"
+		"# First line format:  type(optional-scope): short description (max 72 chars)\n"
+		"# Leave a blank line, then add a longer description below if needed.\n"
+		"# Footer examples:\n"
+		"#   BREAKING CHANGE: describe what breaks\n"
+		"#   Closes #42\n"
+		"#\n"
+		"# Types: feat, fix, chore, refactor, docs, test, perf, style, build,\n"
+		"#        ci, revert, wip, merge, release, security, deps, infra, ux,\n"
+		"#        i18n, hotfix\n",
+		type
+	);
+}
+
+static int open_editor(const char *path) {
+	const char *editor = getenv("VISUAL");
+	if (!editor || !editor[0]) editor = getenv("EDITOR");
+
+	if (editor && editor[0]) {
+		char cmd[PATH_MAX + 128];
+		snprintf(cmd, sizeof(cmd), "%s \"%s\"", editor, path);
+		return system(cmd);
 	}
+
+	/* try common editors in order */
+	const char *fallbacks[] = { "vim", "nano", "vi", NULL };
+	for (int i = 0; fallbacks[i]; i++) {
+		char which_cmd[64];
+		snprintf(which_cmd, sizeof(which_cmd), "command -v %s >/dev/null 2>&1", fallbacks[i]);
+		if (system(which_cmd) == 0) {
+			char cmd[PATH_MAX + 128];
+			snprintf(cmd, sizeof(cmd), "%s \"%s\"", fallbacks[i], path);
+			return system(cmd);
+		}
+	}
+
+	iris_printf(IRIS_LOG_ERROR, "No editor found. Set $VISUAL or $EDITOR.\n");
+	return 1;
+}
+
+static int read_commit_msg(const char *path, char *buf, size_t sz) {
+	FILE *f = fopen(path, "r");
+	if (!f) return 0;
+
+	size_t pos = 0;
+	char line[1024];
+	while (fgets(line, sizeof(line), f)) {
+		if (line[0] == '#') continue;
+		size_t len = strlen(line);
+		if (pos + len >= sz - 1) break;
+		memcpy(buf + pos, line, len);
+		pos += len;
+	}
+	fclose(f);
+
+	/* trim trailing whitespace */
+	while (pos > 0 && (buf[pos-1] == '\n' || buf[pos-1] == '\r' || buf[pos-1] == ' '))
+		pos--;
+	buf[pos] = '\0';
+	return pos > 0;
 }
 
 void commit_push(int argc, char **argv) {
@@ -79,68 +132,34 @@ void commit_push(int argc, char **argv) {
 		int choice = summon_select(options);
 		const char *type = (choice >= 0 && options[choice]) ? options[choice] : "chore";
 
-		/* optional scope */
-		char *scope_raw = readline("Scope (optional, e.g. auth, api): ");
-		char scope_buf[128] = {0};
-		if (scope_raw && scope_raw[0])
-			snprintf(scope_buf, sizeof(scope_buf), "(%s)", scope_raw);
-		free(scope_raw);
+		/* write template to a temp file and open the user's editor */
+		char tmppath[] = "/tmp/iris_commit_XXXXXX";
+		int fd = mkstemp(tmppath);
+		if (fd == -1) {
+			iris_printf(IRIS_LOG_ERROR, "Failed to create temp file: %s\n", strerror(errno));
+			return;
+		}
+		FILE *tmpf = fdopen(fd, "w");
+		if (!tmpf) {
+			close(fd);
+			iris_printf(IRIS_LOG_ERROR, "Failed to open temp file.\n");
+			return;
+		}
+		write_template(tmpf, type);
+		fclose(tmpf);
 
-		/* short description, max 72 chars */
-		char *subject = NULL;
-		while (1) {
-			subject = prompt_required("Short description (max 72 chars): ");
-			int len = (int)strlen(subject);
-			if (len <= SUBJECT_LIMIT) break;
-			iris_printf(IRIS_LOG_WARN, "Too long (%d chars). Please shorten to %d.\n", len, SUBJECT_LIMIT);
-			free(subject);
-			subject = NULL;
+		if (open_editor(tmppath) != 0) {
+			iris_printf(IRIS_LOG_ERROR, "Editor exited with an error.\n");
+			unlink(tmppath);
+			return;
 		}
 
-		/* optional body (blank line ends input) */
-		iris_printf(IRIS_LOG_INFO, "Longer description (blank line to finish):\n");
-		char body_buf[2048] = {0};
-		while (1) {
-			char *line = readline("  ");
-			if (!line || line[0] == '\0') { free(line); break; }
-			if (body_buf[0])
-				strncat(body_buf, "\n", sizeof(body_buf) - strlen(body_buf) - 1);
-			strncat(body_buf, line, sizeof(body_buf) - strlen(body_buf) - 1);
-			free(line);
+		if (!read_commit_msg(tmppath, final_msg, sizeof(final_msg)) || !final_msg[0]) {
+			iris_printf(IRIS_LOG_WARN, "Commit aborted — empty message.\n");
+			unlink(tmppath);
+			return;
 		}
-
-		/* breaking change */
-		char breaking_desc[512] = {0};
-		char *brk = readline("Breaking change? (y/N): ");
-		if (brk && (brk[0] == 'y' || brk[0] == 'Y')) {
-			free(brk);
-			char *desc = readline("Describe the breaking change: ");
-			if (desc && desc[0])
-				snprintf(breaking_desc, sizeof(breaking_desc), "%s", desc);
-			free(desc);
-		} else {
-			free(brk);
-		}
-
-		/* issue references */
-		char *issues_raw = readline("Issue references (e.g. #42, blank to skip): ");
-		char issues_buf[256] = {0};
-		if (issues_raw && issues_raw[0])
-			snprintf(issues_buf, sizeof(issues_buf), "%s", issues_raw);
-		free(issues_raw);
-
-		/* Build conventional commit message */
-		int pos = snprintf(final_msg, sizeof(final_msg), "%s%s: %s", type, scope_buf, subject);
-		free(subject);
-
-		if (body_buf[0])
-			pos += snprintf(final_msg + pos, sizeof(final_msg) - pos, "\n\n%s", body_buf);
-
-		if (breaking_desc[0])
-			pos += snprintf(final_msg + pos, sizeof(final_msg) - pos, "\n\nBREAKING CHANGE: %s", breaking_desc);
-
-		if (issues_buf[0])
-			pos += snprintf(final_msg + pos, sizeof(final_msg) - (size_t)pos, "\nCloses %s", issues_buf);
+		unlink(tmppath);
 	}
 
 	if (has_root)
