@@ -1,85 +1,100 @@
-# Iris CLI
+# Iris (pronounced "Eris")
 
-Iris is a command-line client. Commands are routed via an embedded Prolog router that supports chaining, negation, and multi-token arguments.
+Iris is a developer CLI that wraps your git workflow with a structured commit flow, project-local macros, and a Prolog-powered command router that supports chaining and negation.
 
-## Documentation
+It lives in your shell. You run `iris` instead of raw git for day-to-day work.
 
-- **[User guide](docs/user-guide.md)** — Commands, chaining, macros, bracket groups, examples.
-- **[Architecture](docs/architecture.md)** — Parser, Prolog router, command modules, macro file format.
-- **[Contributing](docs/contributing.md)** — Build, project layout, adding a new command.
-- **[agents.md](agents.md)** — Guide for AI agents (Cursor / IDE).
-- **[claude.md](claude.md)** — Guide for Claude.
+---
 
-## Building
+## What it does
 
-```bash
-mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release
-make
-```
+**`iris init [name]`** — sets up an `.iris/` directory in the current folder, writes the macros file, and adds `.iris/` to git's local exclude so it never shows up in your repo.
 
-The `iris` executable is written to the project root. If SWI-Prolog (e.g. `libswipl-dev`) is available, the Prolog router is used; otherwise a C-only fallback router is used.
+**`iris commit` / `iris copush`** — interactive commit + push in one shot. Prompts you to pick a conventional commit type (`feat`, `fix`, `refactor`, etc.) from a menu, then asks for a message, formats it as `type: message`, stages everything, commits, and pushes. Works from anywhere inside the project.
 
-## Usage
+**`iris ignore <file>`** — adds a file to `.iris/.iris.ignore` so it's skipped during `copush`. Per-project, not global.
 
-```text
-iris <command> [arguments]
-```
+**`iris alias add <name> do <cmd> do <cmd>`** — saves a named macro (sequence of shell commands) to `.iris/.iris.macros`.
 
-Run without a command to see the usage line.
+**`iris alias run <name>`** / **`iris run <name>`** — runs a saved macro.
 
-### Commands
+**`iris rebuild`** — rebuilds the iris binary itself using CMake.
 
-| Command | Aliases | Arguments | Description |
-|---------|---------|-----------|-------------|
-| `init` | — | `[PROJECT_NAME]` (optional) | Initialize an Iris project in the current directory. If `PROJECT_NAME` is omitted, `.` is used. |
-| `commit` | `copush` | — | Stage all changes, commit (prompts for message), and push. |
-| `rebuild` | — | — | Rebuild the Iris binary. |
-| `alias add` | — | `<name> do <cmd> do <cmd> ...` or `<name> "cmd1" "cmd2"` | Add a macro. Use `do` between commands (shell-friendly) or quote each command. |
-| `alias run` | — | `<name>` | Run a macro by name (executes each stored command line via `system()`). |
+**`iris root`** — prints the detected iris project root.
 
-### Chaining and negation (Prolog router)
+---
 
-When the Prolog router is enabled:
+## Command chaining
 
-- **`&&`** — Run the next command only if the previous one succeeded.
-- **`||`** — Run the next command only if the previous one failed (then stop).
-- **`not`** — Invert success/failure of the following command (e.g. `not init` succeeds when `init` would fail).
-
-Examples:
+The command router is written in Prolog. It supports `&&`, `||`, and `not` directly in the argument list:
 
 ```bash
-iris init myapp && iris commit
-iris init || true
-iris not init
+iris init myapp && iris commit      # commit only if init succeeded
+iris init || true                   # ignore failure
+iris not init                       # succeed when init fails
 ```
 
-### Macros (alias add / alias run)
+---
 
-Macros are stored in `.iris/macros` at the project root. The file is human-readable:
+## Macros
+
+Macros are stored in `.iris/.iris.macros` at the project root:
 
 ```ini
-[macro_name]
-command line one
-command line two
-
-[another]
-single command
+[deploy]
+make build
+git push origin main
+ssh prod "systemctl restart app"
 ```
 
-- **Add (shell-friendly):** `iris alias add <name> do <cmd> do <cmd> ...` — Use `do` between commands so you don’t need quoting. Example: `iris alias add test do echo hello world do git status`.
-- **Add (quoted):** `iris alias add <name> "cmd1" "cmd2"` — One quoted string per command.
-- **Run**: `iris alias run <name>` — Runs the macro (each line is executed with `system()` in order).
+**Add with `do` separator** (no quoting needed):
+```bash
+iris alias add deploy do make build do git push origin main
+```
 
-**Loops:** If the *shell* runs a loop that calls iris, keep the whole `iris` command on one line — the `do` inside the args is just a word: `for x in a b c; do iris alias add "$x" do echo "$x" do git status; done`. If a macro *contains* a shell loop (or any line with `;`), use the **quoted** form so the outer shell doesn’t split on semicolons: `iris alias add test "for x in 1 2 3; do echo \$x; done" "git status"`. See [User guide](docs/user-guide.md#macros-with-loops) for details.
+**Add with quotes** (for commands that contain semicolons or shell syntax):
+```bash
+iris alias add test "npm run lint" "npm test"
+```
 
-### Bracket groups (Prolog router)
+**Run:**
+```bash
+iris run deploy
+```
 
-In Prolog mode you can group tokens with `[` and `]`; in bash/zsh you must quote the group. Prefer the `do` or quoted form for `alias add`.
+---
 
-## Project layout
+## Install
 
-- **`src/`** — `main.c`, `utils.c` / `utils.h` (e.g. `find_iris_root`).
-- **`lib/parser/`** — Command routing: `iris_router.pl` (Prolog) and `parser.c` (C interface). Each command module can declare usage in a `.pl` file (e.g. `lib/commands/init/init.pl`).
-- **`lib/commands/`** — Command implementations (init, commit, rebuild, alias add, alias run, etc.).
-- **`docs/`** — [Documentation index](docs/README.md) (user guide, architecture, contributing).
+```bash
+make install
+```
+
+This builds the binary, copies it to `/usr/local/bin/iris`, and appends an alias to your `.bashrc` or `.zshrc` (detected automatically). Then:
+
+```bash
+source ~/.zshrc   # or ~/.bashrc
+```
+
+Dependencies (`cmake`, `gcc`, `libcurl`, `libssl`, etc.) are checked and installed automatically during build if missing.
+
+---
+
+## Build from source
+
+```bash
+make        # configure + build (Debug)
+make CONFIG=Release
+make JOBS=8
+```
+
+Requires: `cmake`, `gcc`/`g++`, `libcurl-dev`, `libssl-dev`, `pkg-config`.  
+Optional: SWI-Prolog (`libswipl-dev`) for the Prolog router — falls back to a C router if not present.
+
+---
+
+## Docs
+
+- [User guide](docs/user-guide.md)
+- [Architecture](docs/architecture.md)
+- [Contributing](docs/contributing.md)
