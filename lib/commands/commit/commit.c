@@ -22,16 +22,22 @@
 #define RL_DIM   "\001\x1b[2m\002"
 #define RL_RESET "\001\x1b[0m\002"
 
-static void save_cache(const char *iris_root, const char *msg) {
-	char path[PATH_MAX];
-	snprintf(path, sizeof(path), "%s/.iris/commit_cache", iris_root);
+static void save_cache(const char *iris_root, const char *branch, const char *msg) {
+	char dir[PATH_MAX], path[PATH_MAX];
+	if (branch[0] && iris_branch_dir(iris_root, branch, dir, sizeof(dir)))
+		snprintf(path, sizeof(path), "%s/commit_cache", dir);
+	else
+		snprintf(path, sizeof(path), "%s/.iris/commit_cache", iris_root);
 	FILE *f = fopen(path, "w");
 	if (f) { fputs(msg, f); fclose(f); }
 }
 
-static int load_cache(const char *iris_root, char *buf, size_t sz) {
-	char path[PATH_MAX];
-	snprintf(path, sizeof(path), "%s/.iris/commit_cache", iris_root);
+static int load_cache(const char *iris_root, const char *branch, char *buf, size_t sz) {
+	char dir[PATH_MAX], path[PATH_MAX];
+	if (branch[0] && iris_branch_dir(iris_root, branch, dir, sizeof(dir)))
+		snprintf(path, sizeof(path), "%s/commit_cache", dir);
+	else
+		snprintf(path, sizeof(path), "%s/.iris/commit_cache", iris_root);
 	FILE *f = fopen(path, "r");
 	if (!f) return 0;
 	size_t n = fread(buf, 1, sz - 1, f);
@@ -39,6 +45,7 @@ static int load_cache(const char *iris_root, char *buf, size_t sz) {
 	fclose(f);
 	return n > 0;
 }
+
 
 static char *prompt_required(const char *label) {
 	char *s;
@@ -59,10 +66,12 @@ void commit_push(int argc, char **argv) {
 
 	char iris_root[PATH_MAX] = {0};
 	int has_root = find_iris_root(iris_root, sizeof(iris_root));
+	char branch[256] = {0};
+	get_current_branch(branch, sizeof(branch));
 	char final_msg[MAX_MSG] = {0};
 
 	if (retry && has_root) {
-		if (!load_cache(iris_root, final_msg, sizeof(final_msg)) || !final_msg[0]) {
+		if (!load_cache(iris_root, branch, final_msg, sizeof(final_msg)) || !final_msg[0]) {
 			iris_printf(IRIS_LOG_ERROR, "No cached commit found. Run iris commit normally first.\n");
 			return;
 		}
@@ -103,23 +112,18 @@ void commit_push(int argc, char **argv) {
 			subject = NULL;
 		}
 
-		/* issue references */
-		char *issues_raw = readline(RL_CYAN "  closes  " RL_RESET RL_DIM " (optional) " RL_RESET ": ");
-		char issues_buf[256] = {0};
-		if (issues_raw && issues_raw[0])
-			snprintf(issues_buf, sizeof(issues_buf), "%s", issues_raw);
-		free(issues_raw);
-
 		/* Build conventional commit message */
-		int pos = snprintf(final_msg, sizeof(final_msg), "%s%s: %s", type, scope_buf, subject);
+		int pos;
+		if (branch[0])
+			pos = snprintf(final_msg, sizeof(final_msg), "%s%s: %s %s", type, scope_buf, branch, subject);
+		else
+			pos = snprintf(final_msg, sizeof(final_msg), "%s%s: %s", type, scope_buf, subject);
 		free(subject);
-
-		if (issues_buf[0])
-			pos += snprintf(final_msg + pos, sizeof(final_msg) - (size_t)pos, "\nCloses %s", issues_buf);
+		(void)pos;
 	}
 
 	if (has_root)
-		save_cache(iris_root, final_msg);
+		save_cache(iris_root, branch, final_msg);
 
 	iris_printf(IRIS_LOG_DEBUG, "\n  committing: ");
 	iris_printf(IRIS_LOG_CMD, "%s\n\n", final_msg);

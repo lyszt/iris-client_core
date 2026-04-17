@@ -56,6 +56,7 @@ void init(const char *project_name) {
     }
 
     iris_printf(IRIS_LOG_INFO, "Initialized IRIS project '%s' in the current directory.\n", name);
+
     write_iris_to_exclude();
     free(tpl.project_name);
     free(tpl.command_lines);

@@ -3,6 +3,8 @@
 #include <string.h>
 #include <limits.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <git2.h>
 #include "utils.h"
 
 int find_iris_root(char *root_path, size_t max_len) {
@@ -44,5 +46,40 @@ int find_iris_root(char *root_path, size_t max_len) {
 		       }
 	       }
 
-	return 0; 
+	return 0;
+}
+
+int get_current_branch(char *buf, size_t sz) {
+	git_libgit2_init();
+	git_repository *repo = NULL;
+	int ret = 0;
+	if (git_repository_open_ext(&repo, ".", 0, NULL) == 0) {
+		git_reference *head = NULL;
+		if (git_repository_head(&head, repo) == 0) {
+			const char *name = git_reference_shorthand(head);
+			if (name) {
+				strncpy(buf, name, sz - 1);
+				buf[sz - 1] = '\0';
+				ret = 1;
+			}
+			git_reference_free(head);
+		}
+		git_repository_free(repo);
+	}
+	git_libgit2_shutdown();
+	return ret;
+}
+
+/* Ensures .iris/branches/<branch>/ exists and writes the path into out. */
+int iris_branch_dir(const char *iris_root, const char *branch, char *out, size_t sz) {
+	char tmp[PATH_MAX];
+
+	snprintf(tmp, sizeof(tmp), "%s/.iris/branches", iris_root);
+	mkdir(tmp, 0755);
+
+	snprintf(tmp, sizeof(tmp), "%s/.iris/branches/%s", iris_root, branch);
+	mkdir(tmp, 0755);
+
+	if ((size_t)snprintf(out, sz, "%s", tmp) >= sz) return 0;
+	return 1;
 }
