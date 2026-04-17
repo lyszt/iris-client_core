@@ -83,3 +83,16 @@ int iris_branch_dir(const char *iris_root, const char *branch, char *out, size_t
 	if ((size_t)snprintf(out, sz, "%s", tmp) >= sz) return 0;
 	return 1;
 }
+
+int iris_macros_path(const char *iris_root, char *out, size_t sz) {
+	char branch[256] = {0};
+	char dir[PATH_MAX];
+	get_current_branch(branch, sizeof(branch));
+	if (!branch[0]) {
+		snprintf(out, sz, "%s/.iris/.iris.macros", iris_root);
+		return 1;
+	}
+	if (!iris_branch_dir(iris_root, branch, dir, sizeof(dir))) return 0;
+	if ((size_t)snprintf(out, sz, "%s/.iris.macros", dir) >= sz) return 0;
+	return 1;
+}

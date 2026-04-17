@@ -15,7 +15,6 @@
  *   iris alias add <name> do <cmd1 words> do <cmd2 words> ...
  *   iris alias add <name> "cmd1" "cmd2"
  */
-static const char *macro_suffix = "/.iris/.iris.macros";
 
 #define MAX_CMD_LINE 4096
 
@@ -26,9 +25,15 @@ void alias_add(int argc, char **argv) {
         iris_printf(IRIS_LOG_ERROR, "Fatal: Not in an Iris project (or any of the parent directories).\n");
         return;
     }
+    int is_global = 0;
+    if (argc >= 1 && argv[0] && strcmp(argv[0], "--global") == 0) {
+        is_global = 1;
+        argv++; argc--;
+    }
+
     if (argc < 1) {
-        iris_printf(IRIS_LOG_ERROR, "Usage: iris alias add <name> do <cmd1> do <cmd2> ...\n");
-        iris_printf(IRIS_LOG_ERROR, "   or: iris alias add <name> \"cmd1\" \"cmd2\"\n");
+        iris_printf(IRIS_LOG_ERROR, "Usage: iris alias add [--global] <name> do <cmd1> do <cmd2> ...\n");
+        iris_printf(IRIS_LOG_ERROR, "   or: iris alias add [--global] <name> \"cmd1\" \"cmd2\"\n");
         return;
     }
     const char *name = argv[0];
@@ -87,15 +92,14 @@ void alias_add(int argc, char **argv) {
         }
     }
 
-    size_t loc_len = strlen(iris_location);
-    size_t suffix_len = strlen(macro_suffix);
     char macro_path[PATH_MAX];
-    if (loc_len + suffix_len >= sizeof(macro_path)) {
+    if (is_global)
+        snprintf(macro_path, sizeof(macro_path), "%s/.iris/.iris.macros", iris_location);
+    else if (!iris_macros_path(iris_location, macro_path, sizeof(macro_path))) {
         for (int i = 0; i < nlines; i++) free(lines[i]);
         iris_printf(IRIS_LOG_ERROR, "Fatal: path too long.\n");
         return;
     }
-    snprintf(macro_path, sizeof(macro_path), "%s%s", iris_location, macro_suffix);
 
     if (append_macro(macro_path, name, lines, (size_t)nlines))
         iris_printf(IRIS_LOG_INFO, "Macro '%s' added (%d command(s)).\n", name, nlines);

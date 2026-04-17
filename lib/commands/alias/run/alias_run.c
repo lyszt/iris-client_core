@@ -10,7 +10,6 @@
 #include <unistd.h>
 
 /* Macros are in the binary file .iris/.iris.macros (same file init creates). */
-static const char *macro_suffix = "/.iris/.iris.macros";
 
 #define MAX_CMD_LINE 4096
 
@@ -33,17 +32,23 @@ void alias_run(int argc, char **argv) {
         return;
     }
     const char *name = argv[0];
-    char macro_path[PATH_MAX];
-    if (strlen(root_path) + strlen(macro_suffix) >= sizeof(macro_path)) {
-        err("iris: path too long.\n");
-        return;
-    }
-    snprintf(macro_path, sizeof(macro_path), "%s%s", root_path, macro_suffix);
 
     char **lines = NULL;
     size_t n = 0;
-    if (!get_macro_commands(macro_path, name, &lines, &n)) {
-        err("iris: Macro '%s' not found or has no commands (add with 'iris alias add %s ...').\n", name, name);
+
+    /* try branch-scoped macros first, then fall back to global */
+    char macro_path[PATH_MAX];
+    if (iris_macros_path(root_path, macro_path, sizeof(macro_path)))
+        get_macro_commands(macro_path, name, &lines, &n);
+
+    if (!lines) {
+        char global_path[PATH_MAX];
+        snprintf(global_path, sizeof(global_path), "%s/.iris/.iris.macros", root_path);
+        get_macro_commands(global_path, name, &lines, &n);
+    }
+
+    if (!lines) {
+        err("iris: Macro '%s' not found (add with 'iris alias add %s ...').\n", name, name);
         return;
     }
 
