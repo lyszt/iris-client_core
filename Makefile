@@ -10,6 +10,7 @@ PREFIX    ?= /usr/local
 DESTDIR   ?=
 PPA       ?= ppa:lyszt/eris
 SERIES    ?= resolute
+GPG_KEY   ?= ADB85BD99D45665D
 
 .PHONY: all configure build run install uninstall deploy clean distclean check-deps deps help
 
@@ -102,7 +103,7 @@ uninstall:
 # uploaded to it, and that key present locally. Users then:
 #   sudo add-apt-repository $(PPA) && sudo apt install eris
 deploy:
-	@PPA="$(PPA)" SERIES="$(SERIES)" packaging/deb/deploy.sh
+	@PPA="$(PPA)" SERIES="$(SERIES)" GPG_KEY="$(GPG_KEY)" packaging/deb/deploy.sh
 
 # ── misc ─────────────────────────────────────────────────────────────────────
 
