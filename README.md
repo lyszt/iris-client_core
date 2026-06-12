@@ -2,7 +2,7 @@
 
 Eris is a developer CLI that wraps your git workflow with a structured commit flow, project-local macros, and a Prolog-powered command router that supports chaining and negation.
 
-It lives in your shell. You run `eris` instead of raw git for day-to-day work.
+You run `eris` instead of raw git for day-to-day work.
 
 ---
 
