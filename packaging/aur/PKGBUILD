@@ -1,7 +1,7 @@
 # Maintainer: João Luís Almeida Santos <luis.almeida@litessera.com>
 pkgname=eris-cli-git
 _pkgsrc=eris-client_core
-pkgver=r0.0000000
+pkgver=r58.1b73e68
 pkgrel=1
 pkgdesc="A C-based CLI that wraps your git workflow in simple commands: guided Conventional Commits, one-shot commit and push, branching, rebasing, and replayable project macros"
 arch=('x86_64')

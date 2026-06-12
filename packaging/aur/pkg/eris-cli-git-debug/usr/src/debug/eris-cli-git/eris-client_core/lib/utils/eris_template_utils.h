@@ -1,0 +1,23 @@
+#ifndef UTILS_ERIS_TEMPLATE_H
+#define UTILS_ERIS_TEMPLATE_H
+
+#include <stddef.h>
+#include <stdio.h>
+#include "utils/eris_template_types.h"
+
+/* Write template to binary file; appends num_macros=0 so file has a macros section. */
+int write_eris_template(const char *filepath, const eris_template *tpl);
+
+/* Read template only (stops before macros section). */
+int read_eris_template(const char *filepath, eris_template *tpl);
+
+/* Get command lines for macro `name`. Returns 1 if found, 0 otherwise. *lines and *n set; caller frees *lines and each (*lines)[i]. */
+int get_macro_commands(const char *filepath, const char *name, char ***lines, size_t *n);
+
+/* Append a new macro to the file. Creates file with empty template if missing. Caller keeps ownership of lines[]. */
+int append_macro(const char *filepath, const char *name, char **lines, size_t n);
+
+/* Free macros array (and each macro's name and lines). */
+void free_macros(eris_macro *macros, size_t num_macros);
+
+#endif
