@@ -5,13 +5,11 @@ Maintainer: João Luís Almeida Santos <luis.almeida@litessera.com>
 Build-Depends: debhelper-compat (= 13),
                cmake,
                pkg-config,
+               libgit2-dev,
                libcurl4-openssl-dev,
                libssl-dev,
                libreadline-dev,
-               swi-prolog,
-               wget,
-               unzip,
-               ca-certificates
+               swi-prolog
 Standards-Version: 4.6.2
 Homepage: https://github.com/lyszt/eris-client_core
 Rules-Requires-Root: no

@@ -7,27 +7,17 @@ pkgdesc="A C-based CLI that wraps your git workflow in simple commands: guided C
 arch=('x86_64')
 url="https://github.com/lyszt/eris-client_core"
 license=('Apache-2.0')
-depends=('swi-prolog' 'curl' 'readline' 'git')
+depends=('swi-prolog' 'curl' 'readline' 'git' 'libgit2')
 makedepends=('git' 'cmake' 'pkgconf')
 provides=('eris-cli' 'eris')
 conflicts=('eris-cli' 'eris-cli-bin')
 options=('!lto')
-source=("$_pkgsrc::git+https://github.com/lyszt/eris-client_core.git"
-        "libgit2-1.8.5.zip::https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.5.zip")
-sha256sums=('SKIP'
-            '82bdcf4e72526c13644df0fbdf21d31571bffd23f6f7720d20795b2172993f07')
+source=("$_pkgsrc::git+https://github.com/lyszt/eris-client_core.git")
+sha256sums=('SKIP')
 
 pkgver() {
   cd "$srcdir/$_pkgsrc"
   printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
-}
-
-prepare() {
-  cd "$srcdir/$_pkgsrc"
-  # Pre-place vendored libgit2 so the build stays offline.
-  mkdir -p vendor
-  cp "$srcdir/libgit2-1.8.5.zip" "vendor/libgit2-v1.8.5.zip"
-  cp -rT "$srcdir/libgit2-1.8.5" "vendor/libgit2-1.8.5"
 }
 
 build() {

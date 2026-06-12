@@ -19,7 +19,7 @@ sudo make uninstall
 
 ## AUR
 
-`eris-cli-git` (`aur/`). Deps: `swi-prolog curl readline git`.
+`eris-cli-git` (`aur/`). Deps: `swi-prolog curl readline git libgit2`.
 
 ```bash
 cd packaging/aur && makepkg -si

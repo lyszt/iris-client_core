@@ -58,7 +58,9 @@ deps: check-deps
 
 # ── build targets ────────────────────────────────────────────────────────────
 
-configure: deps
+# libgit2 is resolved by CMake (system lib preferred, vendored source as fallback),
+# so the normal build no longer force-downloads it. Run `make deps` to pre-vendor.
+configure: check-deps
 	@echo "Configuring (BUILD_DIR=$(BUILD_DIR), CONFIG=$(CONFIG))..."
 	@$(CMAKE) -S . -B $(BUILD_DIR) -DCMAKE_BUILD_TYPE=$(CONFIG) $(CMAKE_OPTIONS)
 

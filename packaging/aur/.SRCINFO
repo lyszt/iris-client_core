@@ -12,14 +12,13 @@ pkgbase = eris-cli-git
 	depends = curl
 	depends = readline
 	depends = git
+	depends = libgit2
 	provides = eris-cli
 	provides = eris
 	conflicts = eris-cli
 	conflicts = eris-cli-bin
 	options = !lto
 	source = eris-client_core::git+https://github.com/lyszt/eris-client_core.git
-	source = libgit2-1.8.5.zip::https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.5.zip
 	sha256sums = SKIP
-	sha256sums = 82bdcf4e72526c13644df0fbdf21d31571bffd23f6f7720d20795b2172993f07
 
 pkgname = eris-cli-git

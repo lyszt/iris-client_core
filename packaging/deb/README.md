@@ -10,7 +10,7 @@ On Debian/Ubuntu:
 
 ```bash
 sudo apt install build-essential debhelper devscripts cmake pkg-config \
-  libcurl4-openssl-dev libssl-dev libreadline-dev swi-prolog wget unzip
+  libgit2-dev libcurl4-openssl-dev libssl-dev libreadline-dev swi-prolog
 
 dpkg-buildpackage -b -us -uc      # binary-only, unsigned
 sudo apt install ../eris_0.1.0_amd64.deb
@@ -31,6 +31,5 @@ dput ppa:<you>/eris ../eris_0.1.0_source.changes
 Set the target series in `debian/changelog` (the `noble` field) to whatever Ubuntu
 release you're publishing for; upload one source per series.
 
-Caveat: Launchpad builds offline. The build downloads libgit2 1.8.5, so for a PPA
-either keep `vendor/` populated in the source tree (it is shipped — `tar-ignore`
-only drops build junk) or switch CMake to the system `libgit2`.
+The build links the distro's `libgit2` (`libgit2-dev`), so nothing is fetched at
+build time — Launchpad's offline builders are fine.
