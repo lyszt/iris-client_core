@@ -1,6 +1,6 @@
 #ifndef IGNORE_H
 #define IGNORE_H
 
-void iris_ignore(int argc, char **argv);
+void eris_ignore(int argc, char **argv);
 
 #endif

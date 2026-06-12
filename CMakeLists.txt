@@ -2,7 +2,7 @@
 set(LIBGIT2_VERSION 1.8.5)
 cmake_minimum_required(VERSION 3.10)
 
-project(IrisCLI VERSION 0.1 LANGUAGES C)
+project(ErisCLI VERSION 0.1 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -13,12 +13,12 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 # Define project source files
-file(GLOB_RECURSE IRISCLI_SRC
+file(GLOB_RECURSE ERISCLI_SRC
   "${PROJECT_SOURCE_DIR}/src/*.c"
   "${PROJECT_SOURCE_DIR}/lib/**/*.c"
 )
 
-add_executable(iris ${IRISCLI_SRC})
+add_executable(eris ${ERISCLI_SRC})
 
 # Find dependencies
 find_package(CURL REQUIRED)
@@ -42,49 +42,49 @@ if(SWIPL_FOUND AND NOT SWIPL_LIBRARY)
   find_library(SWIPL_LIBRARY NAMES swipl)
 endif()
 if(SWIPL_FOUND)
-  target_compile_definitions(iris PRIVATE IRIS_USE_PROLOG=1)
-  target_include_directories(iris PRIVATE ${SWIPL_INCLUDE_DIRS})
+  target_compile_definitions(eris PRIVATE ERIS_USE_PROLOG=1)
+  target_include_directories(eris PRIVATE ${SWIPL_INCLUDE_DIRS})
   if(SWIPL_LIBRARY_DIRS)
-    target_link_directories(iris PRIVATE ${SWIPL_LIBRARY_DIRS})
+    target_link_directories(eris PRIVATE ${SWIPL_LIBRARY_DIRS})
   endif()
   if(SWIPL_LIBRARY)
-    target_link_libraries(iris PRIVATE ${SWIPL_LIBRARY})
+    target_link_libraries(eris PRIVATE ${SWIPL_LIBRARY})
   else()
-    target_link_libraries(iris PRIVATE ${SWIPL_LIBRARIES})
+    target_link_libraries(eris PRIVATE ${SWIPL_LIBRARIES})
   endif()
-  message(STATUS "Iris: using Prolog command router (SWI-Prolog)")
+  message(STATUS "Eris: using Prolog command router (SWI-Prolog)")
 else()
-  message(FATAL_ERROR "Iris requires SWI-Prolog. Install it (e.g. libswipl-dev on Debian/Ubuntu, swi-prolog on Fedora/Arch) and re-run CMake.")
+  message(FATAL_ERROR "Eris requires SWI-Prolog. Install it (e.g. libswipl-dev on Debian/Ubuntu, swi-prolog on Fedora/Arch) and re-run CMake.")
 endif()
 
 # Make sure the project uses our include directory and libgit2
-target_include_directories(iris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/lib" "${PROJECT_SOURCE_DIR}/vendor/libgit2-1.8.5/include")
+target_include_directories(eris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/lib" "${PROJECT_SOURCE_DIR}/vendor/libgit2-1.8.5/include")
 
 
 set(LIBGIT2_DIR vendor/libgit2-${LIBGIT2_VERSION})
 # Build and link libgit2 statically from vendor
 add_subdirectory(${LIBGIT2_DIR})
-target_include_directories(iris PRIVATE ${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/include)
+target_include_directories(eris PRIVATE ${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/include)
 find_library(READLINE_LIBRARY NAMES readline REQUIRED)
-target_link_libraries(iris PRIVATE git2 CURL::libcurl ${READLINE_LIBRARY})
+target_link_libraries(eris PRIVATE git2 CURL::libcurl ${READLINE_LIBRARY})
 
 # Compiler flags (add -Wall by default)
-target_compile_options(iris PRIVATE -Wall)
+target_compile_options(eris PRIVATE -Wall)
 
 
-set_target_properties(iris PROPERTIES
+set_target_properties(eris PROPERTIES
   RUNTIME_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}"
 )
 
-# Write project root to iris.conf in $HOME/.config/iris-cli during build (optional; do not fail the build)
+# Write project root to eris.conf in $HOME/.config/eris-cli during build (optional; do not fail the build)
 add_custom_command(
-  TARGET iris POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E env HOME=$ENV{HOME} sh -c "mkdir -p \"$$HOME/.config/iris-cli\" && echo 'PATH=${PROJECT_SOURCE_DIR}' > \"$$HOME/.config/iris-cli/iris.conf\"" || true
-  COMMENT "Writing project root to $HOME/.config/iris-cli/iris.conf (optional)"
+  TARGET eris POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E env HOME=$ENV{HOME} sh -c "mkdir -p \"$$HOME/.config/eris-cli\" && echo 'PATH=${PROJECT_SOURCE_DIR}' > \"$$HOME/.config/eris-cli/eris.conf\"" || true
+  COMMENT "Writing project root to $HOME/.config/eris-cli/eris.conf (optional)"
 )
 
 # Install target (optional)
-install(TARGETS iris
+install(TARGETS eris
   RUNTIME DESTINATION bin
 )
 
@@ -97,4 +97,4 @@ if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/CMakeLists.txt")
   execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/vendor")
 endif()
 
-message(STATUS "Configured IrisCLI with ${CMAKE_C_COMPILER} (build type=${CMAKE_BUILD_TYPE})")
+message(STATUS "Configured ErisCLI with ${CMAKE_C_COMPILER} (build type=${CMAKE_BUILD_TYPE})")

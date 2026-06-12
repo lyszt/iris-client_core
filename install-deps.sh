@@ -1,9 +1,9 @@
 #!/bin/bash
-# IrisCLI Dependency Installation Script
+# ErisCLI Dependency Installation Script
 
 set -e
 
-echo "Installing dependencies for IrisCLI..."
+echo "Installing dependencies for ErisCLI..."
 
 # Detect OS
 if [ -f /etc/os-release ]; then

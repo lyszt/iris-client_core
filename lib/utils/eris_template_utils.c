@@ -1,5 +1,5 @@
-#include "iris_template_utils.h"
-#include "utils/iris_template_types.h"
+#include "eris_template_utils.h"
+#include "utils/eris_template_types.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -27,7 +27,7 @@ static int read_string(FILE *f, char **str) {
 }
 
 // Write only the template part (project_name + ncmds + command list). Does not close f.
-static int write_template_part(FILE *f, const struct iris_template *tpl) {
+static int write_template_part(FILE *f, const struct eris_template *tpl) {
     if (!write_string(f, tpl->project_name)) return 0;
     size_t ncmds = 0;
     if (tpl->command_lines) {
@@ -58,7 +58,7 @@ static int skip_template(FILE *f) {
     return 1;
 }
 
-int write_iris_template(const char *filepath, const struct iris_template *tpl) {
+int write_eris_template(const char *filepath, const struct eris_template *tpl) {
     FILE *f = fopen(filepath, "wb");
     if (!f) return 0;
     if (!write_template_part(f, tpl)) { fclose(f); return 0; }
@@ -68,7 +68,7 @@ int write_iris_template(const char *filepath, const struct iris_template *tpl) {
     return 1;
 }
 
-int read_iris_template(const char *filepath, struct iris_template *tpl) {
+int read_eris_template(const char *filepath, struct eris_template *tpl) {
     FILE *f = fopen(filepath, "rb");
     if (!f) return 0;
     if (!read_string(f, &tpl->project_name)) { fclose(f); return 0; }
@@ -132,7 +132,7 @@ int get_macro_commands(const char *filepath, const char *name, char ***lines, si
     return 0;
 }
 
-static int write_macros_section(FILE *f, const iris_macro *macros, size_t num_macros) {
+static int write_macros_section(FILE *f, const eris_macro *macros, size_t num_macros) {
     if (fwrite(&num_macros, sizeof(size_t), 1, f) != 1) return 0;
     for (size_t m = 0; m < num_macros; m++) {
         if (!write_string(f, macros[m].name)) return 0;
@@ -143,7 +143,7 @@ static int write_macros_section(FILE *f, const iris_macro *macros, size_t num_ma
     return 1;
 }
 
-static int read_macros_section(FILE *f, iris_macro **macros_out, size_t *num_out) {
+static int read_macros_section(FILE *f, eris_macro **macros_out, size_t *num_out) {
     size_t num_macros = 0;
     if (fread(&num_macros, sizeof(size_t), 1, f) != 1) {
         *num_out = 0;
@@ -155,7 +155,7 @@ static int read_macros_section(FILE *f, iris_macro **macros_out, size_t *num_out
         *macros_out = NULL;
         return 1;
     }
-    iris_macro *macros = calloc(num_macros, sizeof(iris_macro));
+    eris_macro *macros = calloc(num_macros, sizeof(eris_macro));
     if (!macros) return 0;
     size_t m;
     for (m = 0; m < num_macros; m++) {
@@ -185,7 +185,7 @@ fail:
     return 0;
 }
 
-void free_macros(iris_macro *macros, size_t num_macros) {
+void free_macros(eris_macro *macros, size_t num_macros) {
     if (!macros) return;
     for (size_t m = 0; m < num_macros; m++) {
         free(macros[m].name);
@@ -196,7 +196,7 @@ void free_macros(iris_macro *macros, size_t num_macros) {
 }
 
 /* Deep-copy one macro. Returns 1 on success, 0 on alloc failure (caller must free partial). */
-static int copy_one_macro(const iris_macro *src, iris_macro *dst) {
+static int copy_one_macro(const eris_macro *src, eris_macro *dst) {
     dst->name = strdup(src->name);
     if (!dst->name) return 0;
     dst->n = src->n;
@@ -219,20 +219,20 @@ static int copy_one_macro(const iris_macro *src, iris_macro *dst) {
 }
 
 int append_macro(const char *filepath, const char *name, char **lines, size_t n) {
-    struct iris_template tpl = {0};
-    iris_macro *macros = NULL;
+    struct eris_template tpl = {0};
+    eris_macro *macros = NULL;
     size_t num_macros = 0;
 
-    if (!read_iris_template(filepath, &tpl)) {
-        struct iris_template empty = {0};
+    if (!read_eris_template(filepath, &tpl)) {
+        struct eris_template empty = {0};
         empty.project_name = strdup(".");
         empty.command_lines = NULL;
-        if (!write_iris_template(filepath, &empty)) {
+        if (!write_eris_template(filepath, &empty)) {
             free(empty.project_name);
             return 0;
         }
         free(empty.project_name);
-        if (!read_iris_template(filepath, &tpl))
+        if (!read_eris_template(filepath, &tpl))
             return 0;
     }
 
@@ -249,7 +249,7 @@ int append_macro(const char *filepath, const char *name, char **lines, size_t n)
             keep_count++;
     }
     size_t new_n = keep_count + 1;
-    iris_macro *new_macros = malloc(new_n * sizeof(iris_macro));
+    eris_macro *new_macros = malloc(new_n * sizeof(eris_macro));
     if (!new_macros) { free_macros(macros, num_macros); free(tpl.project_name); if (tpl.command_lines) free(tpl.command_lines); return 0; }
     size_t j = 0;
     for (size_t i = 0; i < num_macros; i++) {

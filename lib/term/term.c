@@ -16,26 +16,26 @@
 static bool cached_colors = false;
 static bool cached_colors_inited = false;
 
-static bool iris_colors_enabled(void) {
+static bool eris_colors_enabled(void) {
     if (cached_colors_inited) return cached_colors;
     cached_colors_inited = true;
-    if (getenv("NO_COLOR") || getenv("IRIS_NO_COLOR")) return false;
+    if (getenv("NO_COLOR") || getenv("ERIS_NO_COLOR")) return false;
     return (cached_colors = isatty(fileno(stdout)));
 }
 
-void iris_printf(iris_log_level_t level, const char *fmt, ...) {
+void eris_printf(eris_log_level_t level, const char *fmt, ...) {
     FILE *out = stdout;
     const char *col = "";
     const char *reset = "";
-    if (level == IRIS_LOG_ERROR) out = stderr;
-    if (iris_colors_enabled()) {
+    if (level == ERIS_LOG_ERROR) out = stderr;
+    if (eris_colors_enabled()) {
         reset = CLR_RESET;
         switch (level) {
-            case IRIS_LOG_ERROR: col = CLR_RED; break;
-            case IRIS_LOG_WARN: col = CLR_YELLOW; break;
-            case IRIS_LOG_INFO: col = CLR_GREEN; break;
-            case IRIS_LOG_CMD: col = CLR_CYAN; break;
-            case IRIS_LOG_DEBUG: col = CLR_BOLD; break;
+            case ERIS_LOG_ERROR: col = CLR_RED; break;
+            case ERIS_LOG_WARN: col = CLR_YELLOW; break;
+            case ERIS_LOG_INFO: col = CLR_GREEN; break;
+            case ERIS_LOG_CMD: col = CLR_CYAN; break;
+            case ERIS_LOG_DEBUG: col = CLR_BOLD; break;
             default: col = ""; break;
         }
     }

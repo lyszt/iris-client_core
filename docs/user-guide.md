@@ -1,22 +1,22 @@
 # User guide
 
-## Running Iris
+## Running Eris
 
-From the project root (or any directory under an Iris project):
+From the project root (or any directory under an Eris project):
 
 ```bash
-iris <command> [arguments]
+eris <command> [arguments]
 ```
 
-Run `iris` with no arguments to see the usage line. The executable must be run from a path where the Iris root can be found (current directory or a parent containing `.iris`).
+Run `eris` with no arguments to see the usage line. The executable must be run from a path where the Eris root can be found (current directory or a parent containing `.eris`).
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `init [PROJECT_NAME]` | Initialize an Iris project in the current directory. Optional project name (default `.`). |
+| `init [PROJECT_NAME]` | Initialize an Eris project in the current directory. Optional project name (default `.`). |
 | `commit` / `copush` | Stage all changes, prompt for a commit message, then commit and push (libgit2). |
-| `rebuild` | Rebuild the Iris binary (runs CMake in the Iris source tree). |
+| `rebuild` | Rebuild the Eris binary (runs CMake in the Eris source tree). |
 | `alias add <name> [cmd1] [cmd2] ...` | Add a macro: first argument is the name, rest are command lines (use brackets for multi-word commands). |
 | `alias run <name>` | Run the named macro (each stored line is executed with `system()`). |
 
@@ -31,33 +31,33 @@ When built with SWI-Prolog:
 Examples:
 
 ```bash
-iris init myapp && iris commit
-iris init || true
-iris not init
+eris init myapp && eris commit
+eris init || true
+eris not init
 ```
 
 ## Macros
 
-Macros are stored in `.iris/macros` at the project root. You can edit this file by hand.
+Macros are stored in `.eris/macros` at the project root. You can edit this file by hand.
 
 **Add a macro (use `do` between commands; works in bash and zsh without quoting):**
 
 ```bash
-iris alias add test do echo hello world do git status
-iris alias add deploy do git push origin main do iris commit
+eris alias add test do echo hello world do git status
+eris alias add deploy do git push origin main do eris commit
 ```
 
 **Or quote each command:**
 
 ```bash
-iris alias add test "echo hello world" "git status"
+eris alias add test "echo hello world" "git status"
 ```
 
 **Run a macro:**
 
 ```bash
-iris alias run status
-iris alias run deploy
+eris alias run status
+eris alias run deploy
 ```
 
 **File format:** Each macro is a `[name]` block followed by one command per line. Example:
@@ -68,24 +68,24 @@ git status
 
 [deploy]
 git push origin main
-iris commit
+eris commit
 ```
 
 ### Macros with loops
 
-**Loop in the shell (calling iris):** Use `do` as usual. Keep the whole `iris` invocation on one logical line so the shell doesn’t treat the inner `do` as the loop keyword:
+**Loop in the shell (calling eris):** Use `do` as usual. Keep the whole `eris` invocation on one logical line so the shell doesn’t treat the inner `do` as the loop keyword:
 
 ```bash
-for x in a b c; do iris alias add "$x" do echo "$x" do git status; done
+for x in a b c; do eris alias add "$x" do echo "$x" do git status; done
 ```
 
-**Loop inside a macro (stored and run by iris):** If one of the macro’s lines is a shell loop or uses `;`, the outer shell would split on semicolons and break the `do` form. Use the **quoted** form so the whole loop is one argument:
+**Loop inside a macro (stored and run by eris):** If one of the macro’s lines is a shell loop or uses `;`, the outer shell would split on semicolons and break the `do` form. Use the **quoted** form so the whole loop is one argument:
 
 ```bash
-iris alias add test "for x in 1 2 3; do echo \$x; done" "git status"
+eris alias add test "for x in 1 2 3; do echo \$x; done" "git status"
 ```
 
-Then `iris alias run test` runs the loop in the subshell; the macro file contains:
+Then `eris alias run test` runs the loop in the subshell; the macro file contains:
 
 ```ini
 [test]

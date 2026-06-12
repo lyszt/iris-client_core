@@ -22,22 +22,22 @@
 #define RL_DIM   "\001\x1b[2m\002"
 #define RL_RESET "\001\x1b[0m\002"
 
-static void save_cache(const char *iris_root, const char *branch, const char *msg) {
+static void save_cache(const char *eris_root, const char *branch, const char *msg) {
 	char dir[PATH_MAX], path[PATH_MAX];
-	if (branch[0] && iris_branch_dir(iris_root, branch, dir, sizeof(dir)))
+	if (branch[0] && eris_branch_dir(eris_root, branch, dir, sizeof(dir)))
 		snprintf(path, sizeof(path), "%s/commit_cache", dir);
 	else
-		snprintf(path, sizeof(path), "%s/.iris/commit_cache", iris_root);
+		snprintf(path, sizeof(path), "%s/.eris/commit_cache", eris_root);
 	FILE *f = fopen(path, "w");
 	if (f) { fputs(msg, f); fclose(f); }
 }
 
-static int load_cache(const char *iris_root, const char *branch, char *buf, size_t sz) {
+static int load_cache(const char *eris_root, const char *branch, char *buf, size_t sz) {
 	char dir[PATH_MAX], path[PATH_MAX];
-	if (branch[0] && iris_branch_dir(iris_root, branch, dir, sizeof(dir)))
+	if (branch[0] && eris_branch_dir(eris_root, branch, dir, sizeof(dir)))
 		snprintf(path, sizeof(path), "%s/commit_cache", dir);
 	else
-		snprintf(path, sizeof(path), "%s/.iris/commit_cache", iris_root);
+		snprintf(path, sizeof(path), "%s/.eris/commit_cache", eris_root);
 	FILE *f = fopen(path, "r");
 	if (!f) return 0;
 	size_t n = fread(buf, 1, sz - 1, f);
@@ -52,7 +52,7 @@ static char *prompt_required(const char *label) {
 	while (1) {
 		s = readline(label);
 		if (s && s[0]) return s;
-		iris_printf(IRIS_LOG_ERROR, "This field is required.\n");
+		eris_printf(ERIS_LOG_ERROR, "This field is required.\n");
 		free(s);
 	}
 }
@@ -64,28 +64,28 @@ void commit_push(int argc, char **argv) {
 			retry = 1;
 	}
 
-	char iris_root[PATH_MAX] = {0};
-	int has_root = find_iris_root(iris_root, sizeof(iris_root));
+	char eris_root[PATH_MAX] = {0};
+	int has_root = find_eris_root(eris_root, sizeof(eris_root));
 	char branch[256] = {0};
 	get_current_branch(branch, sizeof(branch));
 	char final_msg[MAX_MSG] = {0};
 
 	if (retry && has_root) {
-		if (!load_cache(iris_root, branch, final_msg, sizeof(final_msg)) || !final_msg[0]) {
-			iris_printf(IRIS_LOG_ERROR, "No cached commit found. Run iris commit normally first.\n");
+		if (!load_cache(eris_root, branch, final_msg, sizeof(final_msg)) || !final_msg[0]) {
+			eris_printf(ERIS_LOG_ERROR, "No cached commit found. Run eris commit normally first.\n");
 			return;
 		}
-		iris_printf(IRIS_LOG_INFO, "Retrying with cached commit message.\n");
+		eris_printf(ERIS_LOG_INFO, "Retrying with cached commit message.\n");
 	} else {
-		if (!iris_git_has_changes(".")) {
-			iris_printf(IRIS_LOG_WARN, "Nothing to commit — working tree is clean.\n");
+		if (!eris_git_has_changes(".")) {
+			eris_printf(ERIS_LOG_WARN, "Nothing to commit — working tree is clean.\n");
 			return;
 		}
 
-		iris_printf(IRIS_LOG_WARN, "This will stage all changes, commit and push.\n\n");
+		eris_printf(ERIS_LOG_WARN, "This will stage all changes, commit and push.\n\n");
 
 		/* commit type */
-		iris_printf(IRIS_LOG_INFO, "Select the type of commit:\n");
+		eris_printf(ERIS_LOG_INFO, "Select the type of commit:\n");
 		const char *options[] = {
 			"feat", "fix", "chore", "refactor", "docs", "test", "perf", "style", "build",
 			"ci", "revert", "wip", "merge", "release", "security", "deps", "infra", "ux",
@@ -107,7 +107,7 @@ void commit_push(int argc, char **argv) {
 			subject = prompt_required(RL_CYAN "  subject " RL_RESET ": ");
 			int len = (int)strlen(subject);
 			if (len <= SUBJECT_LIMIT) break;
-			iris_printf(IRIS_LOG_WARN, "  Too long (%d chars). Please shorten to %d.\n", len, SUBJECT_LIMIT);
+			eris_printf(ERIS_LOG_WARN, "  Too long (%d chars). Please shorten to %d.\n", len, SUBJECT_LIMIT);
 			free(subject);
 			subject = NULL;
 		}
@@ -123,14 +123,14 @@ void commit_push(int argc, char **argv) {
 	}
 
 	if (has_root)
-		save_cache(iris_root, branch, final_msg);
+		save_cache(eris_root, branch, final_msg);
 
-	iris_printf(IRIS_LOG_DEBUG, "\n  committing: ");
-	iris_printf(IRIS_LOG_CMD, "%s\n\n", final_msg);
+	eris_printf(ERIS_LOG_DEBUG, "\n  committing: ");
+	eris_printf(ERIS_LOG_CMD, "%s\n\n", final_msg);
 
-	int ret = iris_git_commit_and_push(".", final_msg);
+	int ret = eris_git_commit_and_push(".", final_msg);
 	if (ret != 0)
-		iris_printf(IRIS_LOG_ERROR, "Git commit/push failed.\n");
+		eris_printf(ERIS_LOG_ERROR, "Git commit/push failed.\n");
 	else
-		iris_printf(IRIS_LOG_INFO, "  pushed.\n");
+		eris_printf(ERIS_LOG_INFO, "  pushed.\n");
 }

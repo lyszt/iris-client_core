@@ -9,5 +9,5 @@
 
 
 void root(const char *project_root) {
-    iris_printf(IRIS_LOG_INFO, "%s\n", project_root);
+    eris_printf(ERIS_LOG_INFO, "%s\n", project_root);
 }

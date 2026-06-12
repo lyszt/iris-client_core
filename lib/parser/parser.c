@@ -15,13 +15,13 @@
 #include <stdio.h>
 #include <string.h>
 
-#ifdef IRIS_USE_PROLOG
+#ifdef ERIS_USE_PROLOG
 #include <SWI-Prolog.h>
 
 static int pl_initialised = 0;
 
-/* If the pending exception is error(iris_syntax(Message)), print it to stderr and clear; return 1. Else return 0. */
-static int pl_print_iris_syntax_error(void) {
+/* If the pending exception is error(eris_syntax(Message)), print it to stderr and clear; return 1. Else return 0. */
+static int pl_print_eris_syntax_error(void) {
   term_t ex = PL_exception(0);
   if (!ex || !PL_is_compound(ex)) return 0;
   atom_t name;
@@ -31,12 +31,12 @@ static int pl_print_iris_syntax_error(void) {
   term_t a1 = PL_new_term_ref();
   if (!PL_get_arg(1, ex, a1)) return 0;
   if (!PL_is_compound(a1) || !PL_get_name_arity(a1, &name, &arity) || arity != 1) return 0;
-  if (strcmp(PL_atom_chars(name), "iris_syntax") != 0) return 0;
+  if (strcmp(PL_atom_chars(name), "eris_syntax") != 0) return 0;
   term_t msg_ref = PL_new_term_ref();
   if (!PL_get_arg(1, a1, msg_ref)) return 0;
   char *msg = NULL;
   if (!PL_get_atom_chars(msg_ref, &msg)) return 0;
-  fprintf(stderr, "iris: syntax error: %s\n", msg);
+  fprintf(stderr, "eris: syntax error: %s\n", msg);
   PL_clear_exception();
   return 1;
 }
@@ -51,10 +51,10 @@ static void put_argv_list(term_t L, int argc, char *argv[]) {
   }
 }
 
-/* Load iris_router.pl from project_root/lib/parser/iris_router.pl */
+/* Load eris_router.pl from project_root/lib/parser/eris_router.pl */
 static int load_router(const char *project_root) {
   char path[PATH_MAX];
-  int n = snprintf(path, sizeof(path), "%s/lib/parser/iris_router.pl", project_root);
+  int n = snprintf(path, sizeof(path), "%s/lib/parser/eris_router.pl", project_root);
   if (n < 0 || (size_t)n >= sizeof(path))
     return 0;
   term_t path_term = PL_new_term_ref();
@@ -215,7 +215,7 @@ static int run_one_cmd(term_t cmd_ref, const char *project_root) {
         root(project_root);
         ok = 1;
       } else if (strcmp(functor, "ignore") == 0) {
-        iris_ignore(argc, argv);
+        eris_ignore(argc, argv);
         ok = 1;
       } else if (strcmp(functor, "branch") == 0) {
         branch_cmd(argc, argv);
@@ -232,19 +232,19 @@ static int run_one_cmd(term_t cmd_ref, const char *project_root) {
   return 0;
 }
 
-/* Call iris_goals(Argv, GoalList) and run the goal chain (and/or/not). Returns 1 on success, 0 on failure. */
+/* Call eris_goals(Argv, GoalList) and run the goal chain (and/or/not). Returns 1 on success, 0 on failure. */
 static int run_goals_via_prolog(int argc, char *argv[], const char *project_root) {
   term_t argv_list = PL_new_term_ref();
   term_t goal_list_ref = PL_new_term_ref();
   put_argv_list(argv_list, argc, argv);
 
-  predicate_t iris_goals_pred = PL_predicate("iris_goals", 2, "user");
+  predicate_t eris_goals_pred = PL_predicate("eris_goals", 2, "user");
   term_t args = PL_new_term_refs(2);
   { int _r = PL_put_term(args, argv_list); (void)_r; }
   PL_put_variable(args + 1);
 
-  if (!PL_call_predicate(NULL, PL_Q_NODEBUG | PL_Q_CATCH_EXCEPTION, iris_goals_pred, args)) {
-    if (!pl_print_iris_syntax_error())
+  if (!PL_call_predicate(NULL, PL_Q_NODEBUG | PL_Q_CATCH_EXCEPTION, eris_goals_pred, args)) {
+    if (!pl_print_eris_syntax_error())
       help_commands();
     return 0;
   }
@@ -290,12 +290,12 @@ static int resolve_command_via_prolog(int argc, char *argv[], char *buf, size_t 
   term_t argv_list = PL_new_term_ref();
   put_argv_list(argv_list, argc, argv);
 
-  predicate_t iris_cmd = PL_predicate("iris_command", 2, "user");
+  predicate_t eris_cmd = PL_predicate("eris_command", 2, "user");
   term_t args = PL_new_term_refs(2);
   { int _r = PL_put_term(args, argv_list); (void)_r; }
   PL_put_variable(args + 1);
 
-  if (!PL_call_predicate(NULL, PL_Q_NODEBUG | PL_Q_CATCH_EXCEPTION, iris_cmd, args)) {
+  if (!PL_call_predicate(NULL, PL_Q_NODEBUG | PL_Q_CATCH_EXCEPTION, eris_cmd, args)) {
     return 0;
   }
   char *cmd_atom = NULL;
@@ -307,9 +307,9 @@ static int resolve_command_via_prolog(int argc, char *argv[], char *buf, size_t 
 #endif
 
 int route_command(int argc, char *argv[], const char *project_root) {
-#ifdef IRIS_USE_PROLOG
+#ifdef ERIS_USE_PROLOG
   if (!pl_initialised) {
-    char *av[] = { (char *)(argv && argv[0] ? argv[0] : "iris"), "-q", NULL };
+    char *av[] = { (char *)(argv && argv[0] ? argv[0] : "eris"), "-q", NULL };
     int ac = 2;
     if (!PL_initialise(ac, av)) {
       help_commands();
@@ -317,12 +317,12 @@ int route_command(int argc, char *argv[], const char *project_root) {
     }
     pl_initialised = 1;
     if (!load_router(project_root)) {
-      fprintf(stderr, "Iris: failed to load router at %s/lib/parser/iris_router.pl\n", project_root);
+      fprintf(stderr, "Eris: failed to load router at %s/lib/parser/eris_router.pl\n", project_root);
       help_commands();
       return 0;
     }
     if (!load_command_modules(project_root)) {
-      fprintf(stderr, "Iris: failed to load command modules from %s/lib/commands/\n", project_root);
+      fprintf(stderr, "Eris: failed to load command modules from %s/lib/commands/\n", project_root);
       help_commands();
       return 0;
     }

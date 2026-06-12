@@ -1,6 +1,6 @@
 #include "alias_add.h"
 #include "term/term.h"
-#include "utils/iris_template_utils.h"
+#include "utils/eris_template_utils.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,20 +9,20 @@
 #include "utils.h"
 
 /*
- * Macros are stored in the binary file .iris/.iris.macros (same file init creates).
+ * Macros are stored in the binary file .eris/.eris.macros (same file init creates).
  *
  * Add (shell-friendly): use "do" between commands, or quote each command.
- *   iris alias add <name> do <cmd1 words> do <cmd2 words> ...
- *   iris alias add <name> "cmd1" "cmd2"
+ *   eris alias add <name> do <cmd1 words> do <cmd2 words> ...
+ *   eris alias add <name> "cmd1" "cmd2"
  */
 
 #define MAX_CMD_LINE 4096
 
 void alias_add(int argc, char **argv) {
-    char iris_location[PATH_MAX];
+    char eris_location[PATH_MAX];
 
-    if (!find_iris_root(iris_location, PATH_MAX)) {
-        iris_printf(IRIS_LOG_ERROR, "Fatal: Not in an Iris project (or any of the parent directories).\n");
+    if (!find_eris_root(eris_location, PATH_MAX)) {
+        eris_printf(ERIS_LOG_ERROR, "Fatal: Not in an Eris project (or any of the parent directories).\n");
         return;
     }
     int is_global = 0;
@@ -32,13 +32,13 @@ void alias_add(int argc, char **argv) {
     }
 
     if (argc < 1) {
-        iris_printf(IRIS_LOG_ERROR, "Usage: iris alias add [--global] <name> do <cmd1> do <cmd2> ...\n");
-        iris_printf(IRIS_LOG_ERROR, "   or: iris alias add [--global] <name> \"cmd1\" \"cmd2\"\n");
+        eris_printf(ERIS_LOG_ERROR, "Usage: eris alias add [--global] <name> do <cmd1> do <cmd2> ...\n");
+        eris_printf(ERIS_LOG_ERROR, "   or: eris alias add [--global] <name> \"cmd1\" \"cmd2\"\n");
         return;
     }
     const char *name = argv[0];
     if (!name || !name[0]) {
-        iris_printf(IRIS_LOG_ERROR, "Macro name cannot be empty.\n");
+        eris_printf(ERIS_LOG_ERROR, "Macro name cannot be empty.\n");
         return;
     }
 
@@ -94,17 +94,17 @@ void alias_add(int argc, char **argv) {
 
     char macro_path[PATH_MAX];
     if (is_global)
-        snprintf(macro_path, sizeof(macro_path), "%s/.iris/.iris.macros", iris_location);
-    else if (!iris_macros_path(iris_location, macro_path, sizeof(macro_path))) {
+        snprintf(macro_path, sizeof(macro_path), "%s/.eris/.eris.macros", eris_location);
+    else if (!eris_macros_path(eris_location, macro_path, sizeof(macro_path))) {
         for (int i = 0; i < nlines; i++) free(lines[i]);
-        iris_printf(IRIS_LOG_ERROR, "Fatal: path too long.\n");
+        eris_printf(ERIS_LOG_ERROR, "Fatal: path too long.\n");
         return;
     }
 
     if (append_macro(macro_path, name, lines, (size_t)nlines))
-        iris_printf(IRIS_LOG_INFO, "Macro '%s' added (%d command(s)).\n", name, nlines);
+        eris_printf(ERIS_LOG_INFO, "Macro '%s' added (%d command(s)).\n", name, nlines);
     else
-        iris_printf(IRIS_LOG_ERROR, "Cannot write to %s\n", macro_path);
+        eris_printf(ERIS_LOG_ERROR, "Cannot write to %s\n", macro_path);
     for (int i = 0; i < nlines; i++)
         free(lines[i]);
 }

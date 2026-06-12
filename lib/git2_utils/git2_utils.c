@@ -7,7 +7,7 @@
 #include "utils.h"
 #include <limits.h>
 
-int iris_git_has_changes(const char *repo_path) {
+int eris_git_has_changes(const char *repo_path) {
     git_libgit2_init();
     git_repository *repo = NULL;
     git_status_list *status_list = NULL;
@@ -32,7 +32,7 @@ done:
     return has_changes;
 }
 
-int iris_git_commit_and_push(const char *repo_path, const char *message) {
+int eris_git_commit_and_push(const char *repo_path, const char *message) {
     git_libgit2_init();
     git_repository *repo = NULL;
     git_index *index = NULL;
@@ -42,21 +42,21 @@ int iris_git_commit_and_push(const char *repo_path, const char *message) {
     
 
     if (git_repository_open_ext(&repo, repo_path, 0, NULL) < 0) {
-        iris_printf(IRIS_LOG_ERROR, "Could not open git repo (starting from %s)\n", repo_path);
+        eris_printf(ERIS_LOG_ERROR, "Could not open git repo (starting from %s)\n", repo_path);
         goto cleanup;
     }
 
     git_repository_index(&index, repo);
     git_index_add_all(index, NULL, 0, NULL, NULL);
-    git_index_remove_directory(index, ".iris", 0);
+    git_index_remove_directory(index, ".eris", 0);
 
-    /* Remove user-ignored paths from .iris/.iris.ignore */
+    /* Remove user-ignored paths from .eris/.eris.ignore */
     {
-        char iris_root[PATH_MAX] = {0};
+        char eris_root[PATH_MAX] = {0};
         char ignore_path[PATH_MAX];
-        if (!find_iris_root(iris_root, sizeof(iris_root)))
-            strncpy(iris_root, repo_path, sizeof(iris_root) - 1);
-        snprintf(ignore_path, sizeof(ignore_path), "%s/.iris/.iris.ignore", iris_root);
+        if (!find_eris_root(eris_root, sizeof(eris_root)))
+            strncpy(eris_root, repo_path, sizeof(eris_root) - 1);
+        snprintf(ignore_path, sizeof(ignore_path), "%s/.eris/.eris.ignore", eris_root);
         FILE *ig = fopen(ignore_path, "r");
         if (ig) {
             char line[PATH_MAX];
@@ -76,7 +76,7 @@ int iris_git_commit_and_push(const char *repo_path, const char *message) {
     git_tree_lookup(&tree, repo, &tree_id);
 
     if (git_signature_default(&sig, repo) < 0) {
-        iris_printf(IRIS_LOG_ERROR, "Git identity not set. Use 'git config --global user.name ...'\n");
+        eris_printf(ERIS_LOG_ERROR, "Git identity not set. Use 'git config --global user.name ...'\n");
         goto cleanup;
     }
 
@@ -90,7 +90,7 @@ int iris_git_commit_and_push(const char *repo_path, const char *message) {
     const git_commit *parents[] = { parent };
     git_commit_create(&commit_id, repo, "HEAD", sig, sig, NULL, message, tree, (parent ? 1 : 0), parents);
 
-    iris_printf(IRIS_LOG_INFO, "Committed: %.7s\n", git_oid_tostr_s(&commit_id));
+    eris_printf(ERIS_LOG_INFO, "Committed: %.7s\n", git_oid_tostr_s(&commit_id));
 
     system("git push");
 

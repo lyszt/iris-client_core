@@ -37,41 +37,41 @@ void rebase_cmd(int argc, char **argv) {
     if (argc >= 1 && argv[0] && argv[0][0]) {
         snprintf(target, sizeof(target), "%s", argv[0]);
     } else if (!get_current_branch(target, sizeof(target)) || !target[0]) {
-        iris_printf(IRIS_LOG_ERROR, "Could not determine current branch. Usage: iris rebase [branch]\n");
+        eris_printf(ERIS_LOG_ERROR, "Could not determine current branch. Usage: eris rebase [branch]\n");
         return;
     }
 
     if (strcmp(target, base) == 0) {
-        iris_printf(IRIS_LOG_WARN, "Target branch '%s' is the base branch — nothing to rebase.\n", base);
+        eris_printf(ERIS_LOG_WARN, "Target branch '%s' is the base branch — nothing to rebase.\n", base);
         return;
     }
 
-    iris_printf(IRIS_LOG_INFO, "Fetching origin...\n");
+    eris_printf(ERIS_LOG_INFO, "Fetching origin...\n");
     if (system("git fetch origin") != 0) {
-        iris_printf(IRIS_LOG_ERROR, "git fetch origin failed.\n");
+        eris_printf(ERIS_LOG_ERROR, "git fetch origin failed.\n");
         return;
     }
 
-    iris_printf(IRIS_LOG_INFO, "Updating base branch: %s\n", base);
+    eris_printf(ERIS_LOG_INFO, "Updating base branch: %s\n", base);
     snprintf(cmd, sizeof(cmd), "git checkout %s && git pull", base);
     if (system(cmd) != 0) {
-        iris_printf(IRIS_LOG_ERROR, "Failed to update base branch '%s'.\n", base);
+        eris_printf(ERIS_LOG_ERROR, "Failed to update base branch '%s'.\n", base);
         return;
     }
 
-    iris_printf(IRIS_LOG_INFO, "Checking out target: %s\n", target);
+    eris_printf(ERIS_LOG_INFO, "Checking out target: %s\n", target);
     snprintf(cmd, sizeof(cmd), "git checkout %s", target);
     if (system(cmd) != 0) {
-        iris_printf(IRIS_LOG_ERROR, "git checkout %s failed.\n", target);
+        eris_printf(ERIS_LOG_ERROR, "git checkout %s failed.\n", target);
         return;
     }
 
-    iris_printf(IRIS_LOG_INFO, "Rebasing %s onto %s...\n", target, base);
+    eris_printf(ERIS_LOG_INFO, "Rebasing %s onto %s...\n", target, base);
     snprintf(cmd, sizeof(cmd), "git rebase %s", base);
     if (system(cmd) != 0) {
-        iris_printf(IRIS_LOG_ERROR, "Rebase hit conflicts. Resolve them, then run 'git rebase --continue'.\n");
+        eris_printf(ERIS_LOG_ERROR, "Rebase hit conflicts. Resolve them, then run 'git rebase --continue'.\n");
         return;
     }
 
-    iris_printf(IRIS_LOG_INFO, "Rebase complete: %s is now on top of %s.\n", target, base);
+    eris_printf(ERIS_LOG_INFO, "Rebase complete: %s is now on top of %s.\n", target, base);
 }

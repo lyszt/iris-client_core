@@ -9,18 +9,18 @@
 
 
 void rebuild(const char *project_root) {
-    iris_printf(IRIS_LOG_INFO, "Rebuilding IRIS with CMake...\n");
+    eris_printf(ERIS_LOG_INFO, "Rebuilding ERIS with CMake...\n");
 
     if (chdir(project_root) != 0) {
-        iris_printf(IRIS_LOG_ERROR, "Cannot find project root.\n");
+        eris_printf(ERIS_LOG_ERROR, "Cannot find project root.\n");
         return;
     }
 
-    int ret = system("cmake --build build --target iris");
+    int ret = system("cmake --build build --target eris");
 
     if (ret != 0) {
-        iris_printf(IRIS_LOG_ERROR, "CMake build failed.\n");
+        eris_printf(ERIS_LOG_ERROR, "CMake build failed.\n");
     } else {
-        iris_printf(IRIS_LOG_INFO, "Iris successfully rebuilt.\n");
+        eris_printf(ERIS_LOG_INFO, "Eris successfully rebuilt.\n");
     }
 }

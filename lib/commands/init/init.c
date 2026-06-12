@@ -6,19 +6,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "utils/iris_template_utils.h"
-#include "utils/iris_template_types.h"
+#include "utils/eris_template_utils.h"
+#include "utils/eris_template_types.h"
 #include <git2.h>
 
 void return_error() {
-  iris_printf(IRIS_LOG_ERROR, "Failed to initialize IRIS project.");
+  eris_printf(ERIS_LOG_ERROR, "Failed to initialize ERIS project.");
   return;
 }
 
 
 
 void init(const char *project_name) {
-    if (system("mkdir -p .iris") != 0) {
+    if (system("mkdir -p .eris") != 0) {
         return_error();
         return;
     }
@@ -45,24 +45,24 @@ void init(const char *project_name) {
         return;
     }
 
-    struct iris_template tpl = {0};
+    struct eris_template tpl = {0};
     tpl.project_name = name;
     tpl.command_lines = calloc(1, sizeof(Command));
-    if (!write_iris_template(".iris/.iris.macros", &tpl)) {
+    if (!write_eris_template(".eris/.eris.macros", &tpl)) {
         free(tpl.project_name);
         free(tpl.command_lines);
         return_error();
         return;
     }
 
-    iris_printf(IRIS_LOG_INFO, "Initialized IRIS project '%s' in the current directory.\n", name);
+    eris_printf(ERIS_LOG_INFO, "Initialized ERIS project '%s' in the current directory.\n", name);
 
-    write_iris_to_exclude();
+    write_eris_to_exclude();
     free(tpl.project_name);
     free(tpl.command_lines);
 }
 
-void write_iris_to_exclude() {
+void write_eris_to_exclude() {
     git_libgit2_init();
 
     git_repository *repo = NULL;
@@ -88,7 +88,7 @@ void write_iris_to_exclude() {
         char line[512];
         while (fgets(line, sizeof(line), f)) {
             line[strcspn(line, "\r\n")] = 0;
-            if (strcmp(line, ".iris/") == 0) {
+            if (strcmp(line, ".eris/") == 0) {
                 found = 1;
                 break;
             }
@@ -99,7 +99,7 @@ void write_iris_to_exclude() {
     if (!found) {
         f = fopen(exclude_path, "a");
         if (f) {
-            fprintf(f, "\n.iris/\n");
+            fprintf(f, "\n.eris/\n");
             fclose(f);
         }
     }

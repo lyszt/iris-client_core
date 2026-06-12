@@ -31,17 +31,25 @@ int summon_select(const char *options[]) {
         char c;
         if (read(STDIN_FILENO, &c, 1) == 1) {
             if (c == '\x1b') {
+                /* Arrow keys send ESC [ A/B. Guard the follow-up reads so a
+                 * bare ESC (or a short read) can't desync the input stream. */
                 char seq[2];
-                read(STDIN_FILENO, &seq[0], 1);
-                read(STDIN_FILENO, &seq[1], 1);
+                if (read(STDIN_FILENO, &seq[0], 1) != 1) continue;
+                if (read(STDIN_FILENO, &seq[1], 1) != 1) continue;
                 if (seq[0] == '[') {
                     if (seq[1] == 'A' && cursor > 0)
                         cursor--;
                     else if (seq[1] == 'B' && cursor < option_count - 1)
                         cursor++;
                 }
-            } else if (c == '\n') {
+            } else if (c == '\n' || c == '\r') {
+                /* In raw mode Enter arrives as CR (\r) or LF (\n) depending on
+                 * the terminal's ICRNL setting — accept either. */
                 break;
+            } else if (c == 'k' && cursor > 0) {
+                cursor--;
+            } else if (c == 'j' && cursor < option_count - 1) {
+                cursor++;
             }
         }
     }

@@ -7,10 +7,10 @@
 #include "parser/parser.h"
 #include "term/term.h"
 
-#define IRIS_ROUTER_SUFFIX "/lib/parser/iris_router.pl"
+#define ERIS_ROUTER_SUFFIX "/lib/parser/eris_router.pl"
 
-/* Find directory that contains lib/parser/iris_router.pl (so Prolog router can load). */
-static int get_iris_root(char *root, size_t size) {
+/* Find directory that contains lib/parser/eris_router.pl (so Prolog router can load). */
+static int get_eris_root(char *root, size_t size) {
     char path[PATH_MAX];
     char try_path[PATH_MAX];
 
@@ -23,7 +23,7 @@ static int get_iris_root(char *root, size_t size) {
     strncpy(root, dir, size - 1);
     root[size - 1] = '\0';
 
-    snprintf(try_path, sizeof(try_path), "%s%s", root, IRIS_ROUTER_SUFFIX);
+    snprintf(try_path, sizeof(try_path), "%s%s", root, ERIS_ROUTER_SUFFIX);
     if (access(try_path, F_OK) == 0) return 1;
 
     /* Try parent (e.g. binary in build/, lib in repo root) */
@@ -32,7 +32,7 @@ static int get_iris_root(char *root, size_t size) {
     parent_buf[sizeof(parent_buf) - 1] = '\0';
     char *parent = dirname(parent_buf);
     if (parent && strlen(parent) > 0) {
-        snprintf(try_path, sizeof(try_path), "%s%s", parent, IRIS_ROUTER_SUFFIX);
+        snprintf(try_path, sizeof(try_path), "%s%s", parent, ERIS_ROUTER_SUFFIX);
         if (access(try_path, F_OK) == 0 && strlen(parent) < size) {
             strncpy(root, parent, size - 1);
             root[size - 1] = '\0';
@@ -45,14 +45,14 @@ static int get_iris_root(char *root, size_t size) {
 int main(int argc, char *argv[]) {
 
     if (argc < 2) {
-        iris_printf(IRIS_LOG_ERROR, "No command provided. Usage: iris <command>\n");
+        eris_printf(ERIS_LOG_ERROR, "No command provided. Usage: eris <command>\n");
         return 1;
     }
 
     char project_root[PATH_MAX] = {0};
     
-    if (!get_iris_root(project_root, sizeof(project_root))) {
-        iris_printf(IRIS_LOG_ERROR, "Could not determine Iris root location.\n");
+    if (!get_eris_root(project_root, sizeof(project_root))) {
+        eris_printf(ERIS_LOG_ERROR, "Could not determine Eris root location.\n");
         return 1;
     }
 

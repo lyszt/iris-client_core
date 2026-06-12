@@ -18,8 +18,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y cmake libssl-dev libcurl4-openssl-dev zlib1g-dev
 
-    - name: Run Iris Bootstrap Build
+    - name: Run Eris Bootstrap Build
       run: make build
 
     - name: Verify Binary
-      run: test -f ./iris
+      run: test -f ./eris

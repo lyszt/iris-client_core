@@ -4,7 +4,7 @@ BUILD_DIR ?= build
 CMAKE     ?= cmake
 JOBS      ?= $(shell nproc 2>/dev/null || echo 1)
 CONFIG    ?= Debug
-BIN_NAME  ?= iris
+BIN_NAME  ?= eris
 BIN       := $(BIN_NAME)
 
 .PHONY: all configure build run install clean distclean check-deps deps help
@@ -71,7 +71,7 @@ run: build
 # ── install ──────────────────────────────────────────────────────────────────
 
 install: build
-	@echo "Installing iris to /usr/local/bin..."
+	@echo "Installing eris to /usr/local/bin..."
 	@sudo install -m 755 $(BUILD_DIR)/$(BIN) /usr/local/bin/$(BIN)
 	@SHELL_RC=""; \
 	case "$$SHELL" in \
@@ -79,9 +79,9 @@ install: build
 		*/bash) SHELL_RC="$$HOME/.bashrc" ;; \
 		*)      SHELL_RC="$$HOME/.bashrc" ;; \
 	esac; \
-	if ! grep -q "alias iris=" "$$SHELL_RC" 2>/dev/null; then \
+	if ! grep -q "alias eris=" "$$SHELL_RC" 2>/dev/null; then \
 		echo "" >> "$$SHELL_RC"; \
-		echo "alias iris='/usr/local/bin/iris'" >> "$$SHELL_RC"; \
+		echo "alias eris='/usr/local/bin/eris'" >> "$$SHELL_RC"; \
 		echo "Alias added to $$SHELL_RC"; \
 	else \
 		echo "Alias already in $$SHELL_RC"; \
@@ -108,7 +108,7 @@ help:
 	@echo "  check-deps   Detect and install missing system deps"
 	@echo "  configure    Run cmake configure"
 	@echo "  build        Build the project"
-	@echo "  run          Build and run iris"
+	@echo "  run          Build and run eris"
 	@echo "  install      Install to /usr/local/bin + add shell alias"
 	@echo "  ctest        Run tests"
 	@echo "  clean        Clean build artifacts"

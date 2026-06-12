@@ -1,26 +1,26 @@
-# Iris (pronounced "Eris")
+# Eris (pronounced "Eris")
 
-Iris is a developer CLI that wraps your git workflow with a structured commit flow, project-local macros, and a Prolog-powered command router that supports chaining and negation.
+Eris is a developer CLI that wraps your git workflow with a structured commit flow, project-local macros, and a Prolog-powered command router that supports chaining and negation.
 
-It lives in your shell. You run `iris` instead of raw git for day-to-day work.
+It lives in your shell. You run `eris` instead of raw git for day-to-day work.
 
 ---
 
 ## What it does
 
-**`iris init [name]`** — sets up an `.iris/` directory in the current folder, writes the macros file, and adds `.iris/` to git's local exclude so it never shows up in your repo.
+**`eris init [name]`** — sets up an `.eris/` directory in the current folder, writes the macros file, and adds `.eris/` to git's local exclude so it never shows up in your repo.
 
-**`iris commit` / `iris copush`** — interactive commit + push in one shot. Prompts you to pick a conventional commit type (`feat`, `fix`, `refactor`, etc.) from a menu, then asks for a message, formats it as `type: message`, stages everything, commits, and pushes. Works from anywhere inside the project.
+**`eris commit` / `eris copush`** — interactive commit + push in one shot. Prompts you to pick a conventional commit type (`feat`, `fix`, `refactor`, etc.) from a menu, then asks for a message, formats it as `type: message`, stages everything, commits, and pushes. Works from anywhere inside the project.
 
-**`iris ignore <file>`** — adds a file to `.iris/.iris.ignore` so it's skipped during `copush`. Per-project, not global.
+**`eris ignore <file>`** — adds a file to `.eris/.eris.ignore` so it's skipped during `copush`. Per-project, not global.
 
-**`iris alias add <name> do <cmd> do <cmd>`** — saves a named macro (sequence of shell commands) to `.iris/.iris.macros`.
+**`eris alias add <name> do <cmd> do <cmd>`** — saves a named macro (sequence of shell commands) to `.eris/.eris.macros`.
 
-**`iris alias run <name>`** / **`iris run <name>`** — runs a saved macro.
+**`eris alias run <name>`** / **`eris run <name>`** — runs a saved macro.
 
-**`iris rebuild`** — rebuilds the iris binary itself using CMake.
+**`eris rebuild`** — rebuilds the eris binary itself using CMake.
 
-**`iris root`** — prints the detected iris project root.
+**`eris root`** — prints the detected eris project root.
 
 ---
 
@@ -29,16 +29,16 @@ It lives in your shell. You run `iris` instead of raw git for day-to-day work.
 The command router is written in Prolog. It supports `&&`, `||`, and `not` directly in the argument list:
 
 ```bash
-iris init myapp && iris commit      # commit only if init succeeded
-iris init || true                   # ignore failure
-iris not init                       # succeed when init fails
+eris init myapp && eris commit      # commit only if init succeeded
+eris init || true                   # ignore failure
+eris not init                       # succeed when init fails
 ```
 
 ---
 
 ## Macros
 
-Macros are stored in `.iris/.iris.macros` at the project root:
+Macros are stored in `.eris/.eris.macros` at the project root:
 
 ```ini
 [deploy]
@@ -49,17 +49,17 @@ ssh prod "systemctl restart app"
 
 **Add with `do` separator** (no quoting needed):
 ```bash
-iris alias add deploy do make build do git push origin main
+eris alias add deploy do make build do git push origin main
 ```
 
 **Add with quotes** (for commands that contain semicolons or shell syntax):
 ```bash
-iris alias add test "npm run lint" "npm test"
+eris alias add test "npm run lint" "npm test"
 ```
 
 **Run:**
 ```bash
-iris run deploy
+eris run deploy
 ```
 
 ---
@@ -70,7 +70,7 @@ iris run deploy
 make install
 ```
 
-This builds the binary, copies it to `/usr/local/bin/iris`, and appends an alias to your `.bashrc` or `.zshrc` (detected automatically). Then:
+This builds the binary, copies it to `/usr/local/bin/eris`, and appends an alias to your `.bashrc` or `.zshrc` (detected automatically). Then:
 
 ```bash
 source ~/.zshrc   # or ~/.bashrc

@@ -3,7 +3,7 @@
 
 #include <git2.h>
 
-int iris_git_commit_and_push(const char *repo_path, const char *message);
-int iris_git_has_changes(const char *repo_path);
+int eris_git_commit_and_push(const char *repo_path, const char *message);
+int eris_git_has_changes(const char *repo_path);
 
 #endif
