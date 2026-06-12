@@ -57,16 +57,48 @@ else()
   message(FATAL_ERROR "Eris requires SWI-Prolog. Install it (e.g. libswipl-dev on Debian/Ubuntu, swi-prolog on Fedora/Arch) and re-run CMake.")
 endif()
 
-# Make sure the project uses our include directory and libgit2
-target_include_directories(eris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/lib" "${PROJECT_SOURCE_DIR}/vendor/libgit2-1.8.5/include")
+# Make sure the project uses our include directories
+target_include_directories(eris PRIVATE "${PROJECT_SOURCE_DIR}/include" "${PROJECT_SOURCE_DIR}/src" "${PROJECT_SOURCE_DIR}/lib")
 
-
+# libgit2: prefer the distro-packaged system library so package builds need no
+# network (works in offline/clean-chroot builds — PPA, makechrootpkg). Only fall
+# back to compiling the vendored source when no system libgit2 is available.
 set(LIBGIT2_DIR vendor/libgit2-${LIBGIT2_VERSION})
-# Build and link libgit2 statically from vendor
-add_subdirectory(${LIBGIT2_DIR})
-target_include_directories(eris PRIVATE ${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/include)
+set(_eris_sys_git2 OFF)
+if(PkgConfig_FOUND)
+  pkg_check_modules(LIBGIT2 IMPORTED_TARGET libgit2)
+  if(LIBGIT2_FOUND)
+    set(ERIS_GIT2_LIB PkgConfig::LIBGIT2)
+    set(_eris_sys_git2 ON)
+  endif()
+endif()
+if(NOT _eris_sys_git2)
+  find_library(GIT2_LIBRARY git2)
+  find_path(GIT2_INCLUDE_DIR git2.h)
+  if(GIT2_LIBRARY AND GIT2_INCLUDE_DIR)
+    target_include_directories(eris PRIVATE ${GIT2_INCLUDE_DIR})
+    set(ERIS_GIT2_LIB ${GIT2_LIBRARY})
+    set(_eris_sys_git2 ON)
+  endif()
+endif()
+if(_eris_sys_git2)
+  message(STATUS "Eris: using system libgit2")
+else()
+  message(STATUS "Eris: system libgit2 not found; building vendored ${LIBGIT2_VERSION}")
+  set(LIBGIT2_ZIP vendor/libgit2-v${LIBGIT2_VERSION}.zip)
+  if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/CMakeLists.txt")
+    if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}")
+      execute_process(COMMAND wget -O "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}" "https://github.com/libgit2/libgit2/archive/refs/tags/v${LIBGIT2_VERSION}.zip")
+    endif()
+    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/vendor")
+  endif()
+  add_subdirectory(${LIBGIT2_DIR})
+  target_include_directories(eris PRIVATE ${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/include)
+  set(ERIS_GIT2_LIB git2)
+endif()
+
 find_library(READLINE_LIBRARY NAMES readline REQUIRED)
-target_link_libraries(eris PRIVATE git2 CURL::libcurl ${READLINE_LIBRARY})
+target_link_libraries(eris PRIVATE ${ERIS_GIT2_LIB} CURL::libcurl ${READLINE_LIBRARY})
 
 # Compiler flags (add -Wall by default)
 target_compile_options(eris PRIVATE -Wall)
@@ -87,14 +119,5 @@ add_custom_command(
 install(TARGETS eris
   RUNTIME DESTINATION bin
 )
-
-# Download and extract libgit2 if not present (using wget for reliability)
-set(LIBGIT2_ZIP vendor/libgit2-v${LIBGIT2_VERSION}.zip)
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}")
-  execute_process(COMMAND wget -O "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}" "https://github.com/libgit2/libgit2/archive/refs/tags/v${LIBGIT2_VERSION}.zip")
-endif()
-if(NOT EXISTS "${PROJECT_SOURCE_DIR}/${LIBGIT2_DIR}/CMakeLists.txt")
-  execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${PROJECT_SOURCE_DIR}/${LIBGIT2_ZIP}" WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/vendor")
-endif()
 
 message(STATUS "Configured ErisCLI with ${CMAKE_C_COMPILER} (build type=${CMAKE_BUILD_TYPE})")
