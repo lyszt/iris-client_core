@@ -7,6 +7,8 @@
 #include "commands/alias/run/alias_run.h"
 #include "commands/root/root.h"
 #include "commands/ignore/ignore.h"
+#include "commands/branch/branch.h"
+#include "commands/rebase/rebase.h"
 #include <limits.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -70,6 +72,8 @@ static int load_command_modules(const char *project_root) {
     "lib/commands/alias/add/alias_add.pl",
     "lib/commands/root/root.pl",
     "lib/commands/ignore/ignore.pl",
+    "lib/commands/branch/branch.pl",
+    "lib/commands/rebase/rebase.pl",
   };
   for (size_t i = 0; i < sizeof(modules) / sizeof(modules[0]); i++) {
     char path[PATH_MAX];
@@ -212,6 +216,12 @@ static int run_one_cmd(term_t cmd_ref, const char *project_root) {
         ok = 1;
       } else if (strcmp(functor, "ignore") == 0) {
         iris_ignore(argc, argv);
+        ok = 1;
+      } else if (strcmp(functor, "branch") == 0) {
+        branch_cmd(argc, argv);
+        ok = 1;
+      } else if (strcmp(functor, "rebase") == 0) {
+        rebase_cmd(argc, argv);
         ok = 1;
       }
       free_argv(argc, argv);
