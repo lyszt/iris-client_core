@@ -1,0 +1,25 @@
+pkgbase = eris-cli-git
+	pkgdesc = A C-based CLI that wraps your git workflow in simple commands: guided Conventional Commits, one-shot commit and push, branching, rebasing, and replayable project macros
+	pkgver = r0.0000000
+	pkgrel = 1
+	url = https://github.com/lyszt/eris-client_core
+	arch = x86_64
+	license = Apache-2.0
+	makedepends = git
+	makedepends = cmake
+	makedepends = pkgconf
+	depends = swi-prolog
+	depends = curl
+	depends = readline
+	depends = git
+	provides = eris-cli
+	provides = eris
+	conflicts = eris-cli
+	conflicts = eris-cli-bin
+	options = !lto
+	source = eris-client_core::git+https://github.com/lyszt/eris-client_core.git
+	source = libgit2-1.8.5.zip::https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.5.zip
+	sha256sums = SKIP
+	sha256sums = 82bdcf4e72526c13644df0fbdf21d31571bffd23f6f7720d20795b2172993f07
+
+pkgname = eris-cli-git

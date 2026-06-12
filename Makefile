@@ -6,8 +6,10 @@ JOBS      ?= $(shell nproc 2>/dev/null || echo 1)
 CONFIG    ?= Debug
 BIN_NAME  ?= eris
 BIN       := $(BIN_NAME)
+PREFIX    ?= /usr/local
+DESTDIR   ?=
 
-.PHONY: all configure build run install clean distclean check-deps deps help
+.PHONY: all configure build run install uninstall clean distclean check-deps deps help
 
 all: build
 
@@ -66,27 +68,28 @@ build: configure
 
 run: build
 	@echo "Running $(BIN)"
-	@./$(BUILD_DIR)/$(BIN)
+	@./$(BIN)
 
 # ── install ──────────────────────────────────────────────────────────────────
 
+# Eris loads its Prolog router (eris_router.pl) and command modules at runtime,
+# relative to the binary. So the binary and its lib/ tree are installed together
+# under $(PREFIX)/lib/eris, and $(PREFIX)/bin/eris is a symlink into it — readlink
+# of /proc/self/exe resolves the symlink and finds the .pl files alongside.
+# Use DESTDIR for staged/package installs. Needs root for system prefixes (sudo).
 install: build
-	@echo "Installing eris to /usr/local/bin..."
-	@sudo install -m 755 $(BUILD_DIR)/$(BIN) /usr/local/bin/$(BIN)
-	@SHELL_RC=""; \
-	case "$$SHELL" in \
-		*/zsh)  SHELL_RC="$$HOME/.zshrc"  ;; \
-		*/bash) SHELL_RC="$$HOME/.bashrc" ;; \
-		*)      SHELL_RC="$$HOME/.bashrc" ;; \
-	esac; \
-	if ! grep -q "alias eris=" "$$SHELL_RC" 2>/dev/null; then \
-		echo "" >> "$$SHELL_RC"; \
-		echo "alias eris='/usr/local/bin/eris'" >> "$$SHELL_RC"; \
-		echo "Alias added to $$SHELL_RC"; \
-	else \
-		echo "Alias already in $$SHELL_RC"; \
-	fi; \
-	echo "Done. Run: source $$SHELL_RC"
+	@echo "Installing eris to $(DESTDIR)$(PREFIX) ..."
+	install -Dm755 $(BIN) $(DESTDIR)$(PREFIX)/lib/eris/$(BIN)
+	install -Dm644 lib/parser/eris_router.pl $(DESTDIR)$(PREFIX)/lib/eris/lib/parser/eris_router.pl
+	@find lib/commands -name '*.pl' -exec sh -c 'install -Dm644 "$$1" "$(DESTDIR)$(PREFIX)/lib/eris/$$1"' _ {} \;
+	install -d $(DESTDIR)$(PREFIX)/bin
+	ln -sf $(PREFIX)/lib/eris/$(BIN) $(DESTDIR)$(PREFIX)/bin/$(BIN)
+	@echo "Installed. Make sure $(PREFIX)/bin is on your PATH, then run: eris help"
+
+uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/bin/$(BIN)
+	rm -rf $(DESTDIR)$(PREFIX)/lib/eris
+	@echo "Uninstalled eris."
 
 # ── misc ─────────────────────────────────────────────────────────────────────
 

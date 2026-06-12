@@ -1,0 +1,54 @@
+# Maintainer: lyszt <kalliddel@gmail.com>
+pkgname=eris-cli-git
+_pkgsrc=eris-client_core
+pkgver=r0.0000000
+pkgrel=1
+pkgdesc="A C-based CLI that wraps your git workflow in simple commands: guided Conventional Commits, one-shot commit and push, branching, rebasing, and replayable project macros"
+arch=('x86_64')
+url="https://github.com/lyszt/eris-client_core"
+license=('Apache-2.0')
+depends=('swi-prolog' 'curl' 'readline' 'git')
+makedepends=('git' 'cmake' 'pkgconf')
+provides=('eris-cli' 'eris')
+conflicts=('eris-cli' 'eris-cli-bin')
+options=('!lto')
+source=("$_pkgsrc::git+https://github.com/lyszt/eris-client_core.git"
+        "libgit2-1.8.5.zip::https://github.com/libgit2/libgit2/archive/refs/tags/v1.8.5.zip")
+sha256sums=('SKIP'
+            '82bdcf4e72526c13644df0fbdf21d31571bffd23f6f7720d20795b2172993f07')
+
+pkgver() {
+  cd "$srcdir/$_pkgsrc"
+  printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+}
+
+prepare() {
+  cd "$srcdir/$_pkgsrc"
+  # Pre-place vendored libgit2 so the build stays offline.
+  mkdir -p vendor
+  cp "$srcdir/libgit2-1.8.5.zip" "vendor/libgit2-v1.8.5.zip"
+  cp -rT "$srcdir/libgit2-1.8.5" "vendor/libgit2-1.8.5"
+}
+
+build() {
+  cd "$srcdir/$_pkgsrc"
+  cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+  cmake --build build -j"$(nproc)"
+}
+
+package() {
+  cd "$srcdir/$_pkgsrc"
+  # Binary + its .pl tree live together; /usr/bin/eris symlinks in.
+  install -Dm755 eris "$pkgdir/usr/lib/eris/eris"
+  install -Dm644 lib/parser/eris_router.pl "$pkgdir/usr/lib/eris/lib/parser/eris_router.pl"
+  while IFS= read -r f; do
+    install -Dm644 "$f" "$pkgdir/usr/lib/eris/$f"
+  done < <(find lib/commands -name '*.pl')
+
+  install -d "$pkgdir/usr/bin"
+  ln -s /usr/lib/eris/eris "$pkgdir/usr/bin/eris"
+
+  install -Dm644 README.md "$pkgdir/usr/share/doc/eris/README.md"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/eris/LICENSE"
+  install -Dm644 NOTICE "$pkgdir/usr/share/licenses/eris/NOTICE"
+}
