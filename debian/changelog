@@ -1,0 +1,5 @@
+eris (0.1.0) noble; urgency=medium
+
+  * Initial Debian/Ubuntu packaging.
+
+ -- João Luís Almeida Santos <luis.almeida@litessera.com>  Fri, 12 Jun 2026 16:16:26 -0300

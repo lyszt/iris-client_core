@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
+%:
+	dh $@
+
+# Build/install via the upstream Makefile so the binary and its runtime .pl
+# tree land together under /usr/lib/eris with a /usr/bin/eris symlink — the
+# layout the binary needs to locate eris_router.pl at runtime.
+override_dh_auto_configure:
+
+override_dh_auto_build:
+	$(MAKE) build CONFIG=Release
+
+override_dh_auto_install:
+	$(MAKE) install DESTDIR=$(CURDIR)/debian/eris PREFIX=/usr
+
+override_dh_auto_test:
+
+override_dh_auto_clean:
+	$(MAKE) distclean || true
+	rm -f eris

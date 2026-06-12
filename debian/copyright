@@ -1,0 +1,28 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: eris
+Source: https://github.com/lyszt/eris-client_core
+
+Files: *
+Copyright: 2026 João Luís Almeida Santos
+License: Apache-2.0
+
+Files: vendor/*
+Copyright: libgit2 contributors
+License: GPL-2.0-with-libgit2-exception
+Comment: Bundled at build time from the upstream libgit2 v1.8.5 release.
+
+License: Apache-2.0
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+ .
+     http://www.apache.org/licenses/LICENSE-2.0
+ .
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+ .
+ On Debian systems, the full text of the Apache License version 2.0 can be
+ found in the file /usr/share/common-licenses/Apache-2.0.

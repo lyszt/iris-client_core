@@ -1,0 +1,5 @@
+# Keep build artifacts and local state out of the source tarball.
+tar-ignore = build
+tar-ignore = .eris
+tar-ignore = eris
+tar-ignore = .git

@@ -1,4 +1,4 @@
-# Maintainer: lyszt <kalliddel@gmail.com>
+# Maintainer: João Luís Almeida Santos <luis.almeida@litessera.com>
 pkgname=eris-cli-git
 _pkgsrc=eris-client_core
 pkgver=r0.0000000

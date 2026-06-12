@@ -1,0 +1,30 @@
+Source: eris
+Section: devel
+Priority: optional
+Maintainer: João Luís Almeida Santos <luis.almeida@litessera.com>
+Build-Depends: debhelper-compat (= 13),
+               cmake,
+               pkg-config,
+               libcurl4-openssl-dev,
+               libssl-dev,
+               libreadline-dev,
+               swi-prolog,
+               wget,
+               unzip,
+               ca-certificates
+Standards-Version: 4.6.2
+Homepage: https://github.com/lyszt/eris-client_core
+Rules-Requires-Root: no
+
+Package: eris
+Architecture: any
+Depends: ${shlibs:Depends},
+         ${misc:Depends},
+         swi-prolog,
+         git
+Description: git workflow CLI with guided commits and macros
+ Eris is a C-based command-line tool that wraps your everyday git
+ workflow in single commands: guided Conventional Commit messages,
+ one-shot stage + commit + push, branch creation, rebasing onto the
+ base branch, and replayable project macros. A Prolog router lets
+ commands chain with and/or/not.
