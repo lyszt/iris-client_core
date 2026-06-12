@@ -28,7 +28,7 @@ debuild -S -sa                    # signed source package
 dput ppa:<you>/eris ../eris_0.1.0_source.changes
 ```
 
-Set the target series in `debian/changelog` (the `noble` field) to whatever Ubuntu
+Set the target series in `debian/changelog` (the `resolute` field) to whatever Ubuntu
 release you're publishing for; upload one source per series.
 
 The build links the distro's `libgit2` (`libgit2-dev`), so nothing is fetched at

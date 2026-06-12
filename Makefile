@@ -8,8 +8,10 @@ BIN_NAME  ?= eris
 BIN       := $(BIN_NAME)
 PREFIX    ?= /usr/local
 DESTDIR   ?=
+PPA       ?= ppa:lyszt/eris
+SERIES    ?= resolute
 
-.PHONY: all configure build run install uninstall clean distclean check-deps deps help
+.PHONY: all configure build run install uninstall deploy clean distclean check-deps deps help
 
 all: build
 
@@ -92,6 +94,15 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/$(BIN)
 	rm -rf $(DESTDIR)$(PREFIX)/lib/eris
 	@echo "Uninstalled eris."
+
+# ── deploy (Launchpad PPA → apt install) ─────────────────────────────────────
+# Builds a signed source package and uploads it to the PPA (Launchpad builds the
+# .deb). Runs in an Ubuntu container so it works from any host; signs with your
+# GnuPG key (~/.gnupg). One-time setup: a Launchpad account, your GPG key
+# uploaded to it, and that key present locally. Users then:
+#   sudo add-apt-repository $(PPA) && sudo apt install eris
+deploy:
+	@PPA="$(PPA)" SERIES="$(SERIES)" packaging/deb/deploy.sh
 
 # ── misc ─────────────────────────────────────────────────────────────────────
 
